@@ -1,0 +1,19 @@
+@import 'tailwindcss';
+
+@plugin 'tailwindcss-animate';
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400&display=swap');
+@source '../views';
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+
+
+@layer base {
+ * {
+        @apply box-border m-0 ;
+    }
+
+    body {
+        @apply bg-white text-black h-full box-border m-0;
+        font-family: 'Inter', sans-serif;
+    }
+}
+

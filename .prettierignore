@@ -1,0 +1,4 @@
+
+resources/views/mail/*
+resources/js/**/*.jsx
+resources/js/**/*.tsx
