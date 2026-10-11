@@ -10,9 +10,9 @@ export default function LoginLayout({
                 <div className="min-h-full min-w-full">{children}</div>
             </div>
             <img
-                src="/images/Logotipo.jpg"
+                src="/images/Logo_Ferrum.jpg"
                 alt="Logotipo"
-                className="hidden rotate-90 sm:block md:block"
+                className="hidden sm:block md:block"
             />
         </div>
     );
