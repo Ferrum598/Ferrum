@@ -1,0 +1,45 @@
+services:
+    - type: web
+      name: proyecto-pg
+      env: docker
+      plan: free
+      autoDeploy: true
+      envVars:
+          - key: APP_NAME
+            value: 'Proyecto PG'
+          - key: APP_ENV
+            value: production
+          - key: APP_KEY
+            sync: false
+          - key: APP_DEBUG
+            value: false
+          - key: APP_URL
+            value: https://proyecto-pg.onrender.com
+          - key: DB_CONNECTION
+            value: pgsql
+          - key: DB_HOST
+            fromDatabase:
+                name: DB_ProyectoPG
+                property: host
+          - key: DB_PORT
+            fromDatabase:
+                name: DB_ProyectoPG
+                property: port
+          - key: DB_DATABASE
+            fromDatabase:
+                name: DB_ProyectoPG
+                property: database
+          - key: DB_USERNAME
+            fromDatabase:
+                name: DB_ProyectoPG
+                property: user
+          - key: DB_PASSWORD
+            fromDatabase:
+                name: DB_ProyectoPG
+                property: password
+
+databases:
+    - name: DB_ProyectoPG
+      plan: free
+      databaseName: proyecto_pg_db
+      user: pguser
