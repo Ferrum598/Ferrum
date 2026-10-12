@@ -1,15 +1,18 @@
-import SistemaLayout from "@/layouts/SistemaLayout/SistemaLayout";
-import { usePage } from "@inertiajs/react";
-import FormularioProducto from "@/components/FormularioProducto/FormularioProducto";
-import { Producto,ImagenProducto } from "@/components/Interfaces/interfaceInventario";
-import { useEffect } from "react";
-import { Categoria } from "@/components/Interfaces/interfaceCategoria";
+import SistemaLayout from '@/layouts/SistemaLayout/SistemaLayout';
+import FormularioProducto from '@/components/FormularioProducto/FormularioProducto';
+import { Head } from '@inertiajs/react';
+import { ProductoEdicion } from '@/components/Interfaces/interfaceInventario';
+import { Categoria } from '@/components/Interfaces/interfaceCategoria';
 
-export default function EditarProducto({ productos, imagenes, categorias } : { productos?: Producto[], imagenes?: ImagenProducto[], categorias?: Categoria[] }) {
-
+export default function EditarProducto({ producto, categorias }: { producto: ProductoEdicion; categorias?: Categoria[] }) {
     return (
-        <SistemaLayout>
-           <FormularioProducto productos={productos} imagenes={imagenes} categorias={categorias} />
-        </SistemaLayout>
+        <>
+            <Head>
+                <title>Editar Producto</title>
+            </Head>
+            <SistemaLayout>
+                <FormularioProducto producto={producto} categorias={categorias} />
+            </SistemaLayout>
+        </>
     );
 }

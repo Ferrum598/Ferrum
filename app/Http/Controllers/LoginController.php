@@ -6,53 +6,38 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
-
 class LoginController extends Controller
 {
     public function iniciarSesion(Request $request)
     {
         $credentials = $request->validate([
-            'usuario' => 'required|max:50',
+            'usuario' => 'required|max:100',
             'password' => 'required|min:2',
         ]);
-        try {
-            //Intentar autenticar al usuario
-             $loginExitoso = Auth::attempt([
-                'nit' => $credentials['usuario'],
-                'password' => $credentials['password'],
-            ]) || Auth::attempt([
-                'nit2' => $credentials['usuario'],
-                'password' => $credentials['password'],
-            ]);
-            if ($loginExitoso) {
-                $request->session()->regenerate(); // Cambia el ID de sesión
-                $usuario = Auth::user()->load('rol');
 
-                 $ruta = match($usuario->rol->rol) {
-                    'Administrador' => '/dashboard',
-                    'Empleado' => '/pedidos',
-                    'Escuela' => '/catalogo',
-                    default => '/catalogo'
-                 };
+        if (Auth::attempt(['usuario' => $credentials['usuario'], 'password' => $credentials['password']])) {
+            $request->session()->regenerate();
+            $usuario = Auth::user();
 
-                return Inertia::render('Login/Login')->with('ruta', $ruta)->with('flash', [
-                    'title' => 'Éxito',
-                    'icon' => 'success',
-                    'message' => 'login exitoso'
-                ]);
-            }
-            // Si la autenticación falla
-        } catch (\Exception $e) {
-            return Inertia::render('Login/Login')->with('flash', [
-                'title' => 'Error',
-                'icon' => 'error',
-                'message' => 'Error al iniciar sesión'
+            // El Administrador entra al dashboard; el resto, al punto de venta
+            $ruta = $usuario->tienePermiso('dashboard') ? '/dashboard' : '/ventas';
+
+            return Inertia::render('Login/Login')->with('ruta', $ruta)->with('flash', [
+                'title' => 'Éxito',
+                'icon' => 'success',
+                'message' => 'login exitoso',
             ]);
         }
+
+        return Inertia::render('Login/Login')->with('flash', [
+            'title' => 'Error',
+            'icon' => 'error',
+            'message' => 'Usuario o contraseña incorrectos',
+        ]);
     }
+
     public function cerrarSesion(Request $request)
     {
-        //Cerrar sesión
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();

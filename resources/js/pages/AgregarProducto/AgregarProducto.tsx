@@ -1,9 +1,9 @@
-import SistemaLayout from "@/layouts/SistemaLayout/SistemaLayout";
-import FormularioProducto from "@/components/FormularioProducto/FormularioProducto";
-import { Head } from "@inertiajs/react";
-import { Categoria } from "@/components/Interfaces/interfaceCategoria";
-export default function AgregarProducto({ categorias } : { categorias?: Categoria[] }) {
-    console.log(categorias);
+import SistemaLayout from '@/layouts/SistemaLayout/SistemaLayout';
+import FormularioProducto from '@/components/FormularioProducto/FormularioProducto';
+import { Head } from '@inertiajs/react';
+import { Categoria } from '@/components/Interfaces/interfaceCategoria';
+
+export default function AgregarProducto({ categorias }: { categorias?: Categoria[] }) {
     return (
         <>
             <Head>

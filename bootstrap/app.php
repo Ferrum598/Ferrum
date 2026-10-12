@@ -27,6 +27,7 @@ return Application::configure(basePath: dirname(__DIR__))
          $middleware->alias([
             'acceso.pagina' => AccesoPagina::class,
             'validar.rol' => ValidarRol::class,
+            'permiso' => \App\Http\Middleware\ValidarPermiso::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

@@ -5,37 +5,44 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 
 class Producto extends Model
-
 {
     protected $table = 'productos';
     protected $primaryKey = 'id_producto';
+
     protected $fillable = [
-        'producto',
-        'producto_plural',
+        'nombre_producto',
         'descripcion',
-        'codigo_barra',
-        'estado',
-        'estatus',
-        'precio',
-        'cantidad',
-        'fk_id_imagen',
-        'fk_id_categoria',
+        'activo',
+        'fk_categoria',
+        'fk_imagen_producto',
     ];
 
-    // Un producto puede estar en muchos pedidos
-    public function pedidos()
-    {
-        return $this->belongsToMany(Pedido::class, 'pedidos_productos', 'fk_id_producto', 'fk_id_pedido')
-            ->withPivot('cantidad');
-    }
-    // Relación con el modelo ImagenProducto
-    public function imagenes()
-    {
-        return $this->belongsTo(ImagenProducto::class, 'fk_id_imagen', 'id_imagen');
-    }
-    // Relación con el modelo Categoria
+    protected $casts = ['activo' => 'boolean'];
+
     public function categoria()
     {
-        return $this->belongsTo(Categoria::class, 'fk_id_categoria', 'id_categoria');
+        return $this->belongsTo(Categoria::class, 'fk_categoria', 'id_categoria');
+    }
+
+    public function imagen()
+    {
+        return $this->belongsTo(ImagenProducto::class, 'fk_imagen_producto', 'id_imagen_producto');
+    }
+
+    public function lotes()
+    {
+        return $this->hasMany(Lote::class, 'fk_producto', 'id_producto');
+    }
+
+    // Lotes activos con stock, del más barato al más caro
+    public function lotesDisponibles()
+    {
+        return $this->lotes()->where('activo', true)->where('cantidad_disponible', '>', 0)->orderBy('precio_venta');
+    }
+
+    // Existencias totales = suma de lo disponible en los lotes activos
+    public function existencias(): int
+    {
+        return (int) $this->lotes()->where('activo', true)->sum('cantidad_disponible');
     }
 }

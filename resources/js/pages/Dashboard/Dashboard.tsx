@@ -1,213 +1,69 @@
 import SistemaLayout from "@/layouts/SistemaLayout/SistemaLayout";
-import { Head, usePage } from "@inertiajs/react";
+import { Head } from "@inertiajs/react";
+import { useState } from "react";
 import { DashboardData } from "@/components/Interfaces/interfaceDashboard";
 
-export default function Dashboard() {
-    const props = usePage<DashboardData>().props;
+const money = (value: number) => `Q${Number(value || 0).toLocaleString("es-GT", { minimumFractionDigits: 2 })}`;
+const number = (value: number) => Number(value || 0).toLocaleString("es-GT");
 
-    // Datos con valores por defecto para evitar errores
-    const estadisticas = props.estadisticas || {
-        total_pedidos: 0,
-        total_usuarios: 0,
-        ventas_hoy: 0,
-        ventas_mes: 0,
-    };
-
-    const {
-        productos_mas_vendidos = [],
-        productos_menos_vendidos = [],
-        ventas_por_mes = [],
-        productos_stock_bajo = [],
-        pedidos_recientes = [],
-        estados_pedidos = [],
-    } = props;
-
-    // Funciones utilitarias
-    const formatNumber = (num:any) => num?.toLocaleString('es-GT') ?? '0';
-    const formatCurrency = (num:any) => `Q${Number(num || 0).toLocaleString('es-GT', {minimumFractionDigits: 2})}`;
-
+export default function Dashboard(props: DashboardData) {
+    const stats = props.estadisticas;
+    const [dias, setDias] = useState<7 | 30>(30);
+    const serie = props.ventas_por_dia.slice(-dias);
+    const maxTotal = Math.max(...serie.map((item) => item.total), 1);
     return (
         <SistemaLayout>
             <Head title="Dashboard" />
-            <div className="w-full px-2 md:px-6 py-4 space-y-6">
+            <div className="w-full space-y-6 px-2 py-4 md:px-6">
                 <div className="mb-8">
-                    <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Dashboard</h1>
+                    <h1 className="text-2xl font-bold text-gray-900 md:text-3xl">Dashboard</h1>
                     <p className="text-gray-600">Resumen general del sistema</p>
                 </div>
-
-                {/* Estadísticas Generales */}
-                <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-6 mb-8">
-                    <div className="bg-blue-500 text-white p-4 md:p-6 rounded-lg shadow-md">
-                        <h3 className="text-base md:text-lg font-semibold">Total Pedidos</h3>
-                        <p className="text-2xl md:text-3xl font-bold">{formatNumber(estadisticas.total_pedidos)}</p>
-                    </div>
-                    <div className="bg-green-500 text-white p-4 md:p-6 rounded-lg shadow-md">
-                        <h3 className="text-base md:text-lg font-semibold">Total Usuarios</h3>
-                        <p className="text-2xl md:text-3xl font-bold">{formatNumber(estadisticas.total_usuarios)}</p>
-                    </div>
-                    <div className="bg-orange-500 text-white p-4 md:p-6 rounded-lg shadow-md">
-                        <h3 className="text-base md:text-lg font-semibold">Ventas Hoy</h3>
-                        <p className="text-xl md:text-2xl font-bold">{formatCurrency(estadisticas.ventas_hoy)}</p>
-                    </div>
-                    <div className="bg-red-500 text-white p-4 md:p-6 rounded-lg shadow-md">
-                        <h3 className="text-base md:text-lg font-semibold">Ventas del Mes</h3>
-                        <p className="text-xl md:text-2xl font-bold">{formatCurrency(estadisticas.ventas_mes)}</p>
-                    </div>
+                <div className="grid grid-cols-2 gap-4 md:grid-cols-4 md:gap-6">
+                    <StatCard title="Ventas de hoy" detail={`${number(stats.ventas_hoy_cantidad)} ventas`} value={money(stats.ventas_hoy_monto)} color="bg-orange-500" />
+                    <StatCard title="Ventas del mes" detail={`${number(stats.ventas_mes_cantidad)} ventas`} value={money(stats.ventas_mes_monto)} color="bg-blue-500" />
+                    <StatCard title="Ingresos cobrados del mes" detail="Contado + abonos" value={money(stats.ingresos_cobrados_mes)} color="bg-green-500" />
+                    <StatCard title="Cr?ditos pendientes" detail="Saldo pendiente" value={money(stats.creditos_pendientes)} color="bg-amber-500" />
+                    <StatCard title="Cr?ditos vencidos" detail="Saldo vencido" value={money(stats.creditos_vencidos)} color="bg-red-500" />
+                    <StatCard title="Unidades en stock bajo" detail="Productos con 5 unidades o menos" value={number(stats.stock_bajo_unidades)} color="bg-purple-500" />
                 </div>
-
-                {/* Fila de gráficos principales */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 mb-8">
-                    {/* Productos Más Vendidos */}
-                    <div className="bg-white p-4 md:p-6 rounded-lg shadow-md">
-                        <h2 className="text-lg md:text-xl font-bold text-gray-800 mb-4">Productos Más Vendidos</h2>
+                <div className="grid grid-cols-1 gap-4 md:gap-6 lg:grid-cols-2">
+                    <section className="rounded-lg bg-white p-4 shadow-md md:p-6">
+                        <h2 className="mb-4 text-lg font-bold text-gray-800 md:text-xl">Productos m?s vendidos este mes</h2>
                         <div className="space-y-3">
-                            {productos_mas_vendidos.length > 0 ? (
-                                productos_mas_vendidos.slice(0, 5).map((producto, index) => (
-                                    <div key={index} className="flex flex-col sm:flex-row justify-between items-center p-3 bg-gray-50 rounded">
-                                        <div>
-                                            <p className="font-semibold text-gray-800">{producto.producto || 'Sin nombre'}</p>
-                                            <p className="text-sm text-gray-600">Precio: {formatCurrency(producto.precio)}</p>
-                                        </div>
-                                        <div className="text-right">
-                                            <p className="font-bold text-green-600">{formatNumber(producto.total_vendido)} vendidos</p>
-                                            <p className="text-sm text-gray-600">{formatCurrency(producto.ingresos_generados)}</p>
-                                        </div>
-                                    </div>
-                                ))
-                            ) : (
-                                <p className="text-gray-500 text-center py-8">No hay datos de productos vendidos</p>
-                            )}
+                            {props.productos_mas_vendidos.length ? props.productos_mas_vendidos.map((producto, index) => (
+                                <div key={producto.producto + index} className="flex items-center justify-between rounded bg-gray-50 p-3">
+                                    <span className="font-semibold text-gray-800">{producto.producto}</span>
+                                    <div className="text-right"><p className="font-bold text-green-600">{number(producto.total_vendido)} vendidos</p><p className="text-sm text-gray-600">{money(producto.ingresos_generados)}</p></div>
+                                </div>
+                            )) : <p className="py-8 text-center text-gray-500">No hay ventas este mes.</p>}
                         </div>
-                    </div>
-
-                    {/* Productos Menos Vendidos */}
-                    <div className="bg-white p-4 md:p-6 rounded-lg shadow-md">
-                        <h2 className="text-lg md:text-xl font-bold text-gray-800 mb-4">Productos Menos Vendidos</h2>
+                    </section>
+                    <section className="rounded-lg bg-white p-4 shadow-md md:p-6">
+                        <h2 className="mb-4 text-lg font-bold text-red-600 md:text-xl">Stock bajo (5 unidades o menos)</h2>
                         <div className="space-y-3">
-                            {productos_menos_vendidos.length > 0 ? (
-                                productos_menos_vendidos.slice(0, 5).map((producto, index) => (
-                                    <div key={index} className="flex flex-col sm:flex-row justify-between items-center p-3 bg-gray-50 rounded">
-                                        <div>
-                                            <p className="font-semibold text-gray-800">{producto.producto || 'Sin nombre'}</p>
-                                            <p className="text-sm text-gray-600">Precio: {formatCurrency(producto.precio)}</p>
-                                        </div>
-                                        <div className="text-right">
-                                            <p className="font-bold text-red-600">{formatNumber(producto.total_vendido)} vendidos</p>
-                                            <p className="text-sm text-gray-600">Stock: {formatNumber(producto.stock_actual)}</p>
-                                        </div>
-                                    </div>
-                                ))
-                            ) : (
-                                <p className="text-gray-500 text-center py-8">No hay datos de productos</p>
-                            )}
+                            {props.productos_stock_bajo.length ? props.productos_stock_bajo.map((producto) => (
+                                <div key={producto.id_producto} className="flex justify-between rounded bg-red-50 p-3">
+                                    <span className="font-semibold text-gray-800">{producto.producto}</span><span className="font-bold text-red-600">{number(producto.cantidad_disponible)} restantes</span>
+                                </div>
+                            )) : <p className="py-8 text-center text-gray-500">Todos los productos tienen stock suficiente.</p>}
                         </div>
-                    </div>
+                    </section>
                 </div>
-
-                {/* Segunda fila */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 mb-8">
-                    {/* Ventas por Mes */}
-                    <div className="bg-white p-4 md:p-6 rounded-lg shadow-md">
-                        <h2 className="text-lg md:text-xl font-bold text-gray-800 mb-4">Ventas por Mes</h2>
-                        <div className="space-y-3">
-                            {ventas_por_mes.length > 0 ? (
-                                ventas_por_mes.map((venta, index) => (
-                                    <div key={index} className="flex justify-between items-center p-3 bg-blue-50 rounded">
-                                        <div>
-                                            <p className="font-semibold text-gray-800">{venta.mes || 'N/A'} {venta.año || 'N/A'}</p>
-                                            <p className="text-sm text-gray-600">{formatNumber(venta.cantidad_pedidos)} pedidos</p>
-                                        </div>
-                                        <div className="text-right">
-                                            <p className="font-bold text-blue-600">{formatCurrency(venta.total)}</p>
-                                        </div>
-                                    </div>
-                                ))
-                            ) : (
-                                <p className="text-gray-500 text-center py-8">No hay datos de ventas por mes</p>
-                            )}
-                        </div>
+                <section className="rounded-lg bg-white p-4 shadow-md md:p-6">
+                    <div className="mb-4 flex items-center justify-between gap-3"><h2 className="text-lg font-bold text-gray-800 md:text-xl">Ventas de los ?ltimos {dias} d?as</h2><div className="flex gap-2">{([7, 30] as const).map((periodo) => <button key={periodo} onClick={() => setDias(periodo)} className={`rounded px-3 py-1 text-sm ${dias === periodo ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-700"}`}>{periodo} d?as</button>)}</div></div>
+                    <div className="flex h-56 items-end gap-1 overflow-x-auto border-b border-gray-200 pb-1">
+                        {serie.map((venta) => <div key={venta.fecha} className="group flex h-full min-w-5 flex-1 flex-col justify-end" title={`${venta.etiqueta}: ${number(venta.cantidad)} ventas, ${money(venta.total)}`}>
+                            <div className="w-full rounded-t bg-blue-500 hover:bg-blue-600" style={{ height: `${Math.max(venta.total / maxTotal * 100, venta.total > 0 ? 3 : 0)}%` }} />
+                        </div>)}
                     </div>
-
-                    {/* Stock Bajo */}
-                    <div className="bg-white p-6 rounded-lg shadow-md">
-                        <h2 className="text-xl font-bold text-red-600 mb-4">⚠️ Stock Bajo (&lt; 10 unidades)</h2>
-                        <div className="space-y-3">
-                            {productos_stock_bajo.length > 0 ? (
-                                productos_stock_bajo.map((producto, index) => (
-                                    <div key={index} className="flex justify-between items-center p-3 bg-red-50 rounded">
-                                        <div>
-                                            <p className="font-semibold text-gray-800">{producto.producto || 'Sin nombre'}</p>
-                                            <p className="text-sm text-gray-600">{formatCurrency(producto.precio)}</p>
-                                        </div>
-                                        <div className="text-right">
-                                            <p className="font-bold text-red-600">{formatNumber(producto.cantidad)} restantes</p>
-                                            <p className="text-xs text-red-500">¡Reabastecer!</p>
-                                        </div>
-                                    </div>
-                                ))
-                            ) : (
-                                <p className="text-gray-500 text-center py-4">✅ Todos los productos tienen stock suficiente</p>
-                            )}
-                        </div>
-                    </div>
-                </div>
-
-                {/* Tercera fila */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {/* Pedidos Recientes */}
-                    <div className="bg-white p-6 rounded-lg shadow-md">
-                        <h2 className="text-xl font-bold text-gray-800 mb-4">🕒 Pedidos Recientes</h2>
-                        <div className="space-y-3">
-                            {pedidos_recientes.length > 0 ? (
-                                pedidos_recientes.map((pedido, index) => (
-                                    <div key={index} className="flex justify-between items-center p-3 bg-gray-50 rounded">
-                                        <div>
-                                            <p className="font-semibold text-gray-800">#{pedido.id || 'N/A'} - {pedido.usuario || 'Usuario desconocido'}</p>
-                                            <p className="text-sm text-gray-600">{pedido.fecha || 'Sin fecha'} • {formatNumber(pedido.productos_count)} productos</p>
-                                        </div>
-                                        <div className="text-right">
-                                            <p className="font-bold text-green-600">{formatCurrency(pedido.total)}</p>
-                                            <span className={`text-xs px-2 py-1 rounded-full ${
-                                                pedido.estado === 'completado' ? 'bg-green-100 text-green-800' :
-                                                pedido.estado === 'pendiente' ? 'bg-yellow-100 text-yellow-800' :
-                                                'bg-red-100 text-red-800'
-                                            }`}>
-                                                {pedido.estado || 'desconocido'}
-                                            </span>
-                                        </div>
-                                    </div>
-                                ))
-                            ) : (
-                                <p className="text-gray-500 text-center py-8">No hay pedidos recientes</p>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Estados de Pedidos */}
-                    <div className="bg-white p-6 rounded-lg shadow-md">
-                        <h2 className="text-xl font-bold text-gray-800 mb-4">📋 Estados de Pedidos</h2>
-                        <div className="space-y-4">
-                            {estados_pedidos.length > 0 ? (
-                                estados_pedidos.map((estado, index) => (
-                                    <div key={index} className="flex justify-between items-center p-4 bg-gray-50 rounded">
-                                        <div className="flex items-center">
-                                            <div className={`w-4 h-4 rounded-full mr-3 ${
-                                                estado.estado === 'completado' ? 'bg-green-500' :
-                                                estado.estado === 'pendiente' ? 'bg-yellow-500' :
-                                                'bg-red-500'
-                                            }`}></div>
-                                            <span className="font-semibold capitalize">{estado.estado || 'desconocido'}</span>
-                                        </div>
-                                        <span className="text-2xl font-bold text-gray-800">{formatNumber(estado.cantidad)}</span>
-                                    </div>
-                                ))
-                            ) : (
-                                <p className="text-gray-500 text-center py-8">No hay datos de estados</p>
-                            )}
-                        </div>
-                    </div>
-                </div>
+                    <div className="mt-2 flex justify-between text-xs text-gray-500"><span>{serie[0]?.etiqueta}</span><span>Importe por d?a</span><span>Hoy</span></div>
+                </section>
             </div>
         </SistemaLayout>
     );
+}
+
+function StatCard({ title, detail, value, color }: { title: string; detail: string; value: string; color: string }) {
+    return <div className={`${color} rounded-lg p-4 text-white shadow-md md:p-6`}><h3 className="text-sm font-semibold md:text-base">{title}</h3><p className="mt-1 text-xl font-bold md:text-2xl">{value}</p><p className="mt-1 text-xs text-white/90 md:text-sm">{detail}</p></div>;
 }

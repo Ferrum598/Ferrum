@@ -1,17 +1,31 @@
-
 import { useState, useEffect } from 'react';
 import { usePage } from '@inertiajs/react';
 import Swal from 'sweetalert2';
 import { Inertia } from '@inertiajs/inertia';
 import { Link } from '@inertiajs/react';
 
+// Cada opción del menú se muestra solo si el rol del usuario tiene el permiso indicado
+const opcionesMenu = [
+    { href: '/dashboard', permiso: 'dashboard', texto: 'Dashboard', icono: '/assets/icon/dashboard.png' },
+    { href: '/ventas', permiso: 'ventas', texto: 'Ventas', icono: '/assets/icon/catalogo.png' },
+    { href: '/comprobantes', permiso: 'comprobantes', texto: 'Comprobantes', icono: '/assets/icon/facturacion.png' },
+    { href: '/inventario', permiso: 'inventario', texto: 'Inventario', icono: '/assets/icon/inventario.png' },
+    { href: '/codigos-barras', permiso: 'codigos_barras', texto: 'Códigos de barras', icono: '/assets/icon/pedido.png' },
+    { href: '/clientes', permiso: 'clientes', texto: 'Clientes', icono: '/assets/icon/carrito.png' },
+    { href: '/creditos', permiso: 'creditos', texto: 'Créditos', icono: '/assets/icon/credito.png' },
+    { href: '/reportes/ventas', permiso: 'reportes', texto: 'Reportes', icono: '/assets/icon/verEstado.png' },
+    { href: '/reportes/ganancias', permiso: 'reportes', texto: 'Ganancias', icono: '/assets/icon/dashboard.png' },
+    { href: '/gastos-fijos', permiso: 'gastos', texto: 'Gastos fijos', icono: '/assets/icon/facturacion.png' },
+    { href: '/categorias', permiso: 'categorias', texto: 'Categorías', icono: '/assets/icon/categorias.png' },
+];
+
 export default function BarraDeNavegacion() {
     const page = usePage();
     const props = page.props as any;
     const usuario = props.auth?.user;
     const rol = usuario?.rol;
+    const permisos: string[] = usuario?.permisos ?? [];
     const currentPath = page.url;
-    const imagenPerfil = props.auth?.imagenPerfil;
     const [open, setOpen] = useState(false);
 
     // Bloquear scroll del fondo cuando el menú móvil está abierto
@@ -99,7 +113,7 @@ export default function BarraDeNavegacion() {
                 <div className="mb-6 h-32 w-32 overflow-hidden rounded-full bg-white relative flex items-center justify-center">
                     <img
                         className="object-fill h-full w-full"
-                        src={imagenPerfil || '/images/Avatar.jpg'}
+                        src="/images/Avatar.jpg"
                         alt="Profile"
                     />
                 </div>
@@ -121,105 +135,19 @@ export default function BarraDeNavegacion() {
                 <div className="flex w-full flex-col items-center">
                     <nav className="mb-6 w-full border-t border-gray-300 pt-6 text-3xl text-white">
                         <ul>
-                           {/*Dashboard*/}
-                            {rol === 'Administrador' && (
-                                <li className={`mb-6 transition delay-75 ease-in-out hover:translate-x-6 hover:scale-110 hover:text-gray-300 ${currentPath === '/dashboard' ? 'text-gray-600 bg-white/25 w-[90%] p-1 rounded-[8px]' : ''}`}>
-                                    <Link
-                                        href="/dashboard"
-                                        className="flex items-center gap-2"
+                            {opcionesMenu
+                                .filter((opcion) => permisos.includes(opcion.permiso))
+                                .map((opcion) => (
+                                    <li
+                                        key={opcion.href}
+                                        className={`mb-6 transition delay-75 ease-in-out hover:translate-x-6 hover:scale-110 hover:text-gray-300 ${currentPath.startsWith(opcion.href) ? 'text-gray-600 bg-white/25 w-[90%] p-1 rounded-[8px]' : ''}`}
                                     >
-                                        <img
-                                            src="/assets/icon/dashboard.png"
-                                            alt="Dashboard"
-                                            className="h-6 w-6"
-                                        />
-                                        Dashboard
-                                    </Link>
-                                </li>
-                          )}
-                            
-
-                            {/*Catálogo - Todos */}
-                            <li className={`mb-6 transition delay-75 ease-in-out hover:translate-x-6 hover:scale-110 hover:text-gray-300 ${currentPath === '/catalogo' ? 'text-gray-600 bg-white/25 w-[90%] p-1 rounded-[8px]' : ''}`}>
-                                <Link href="/catalogo" className="flex items-center gap-2">
-                                    <img
-                                        src="/assets/icon/catalogo.png"
-                                        alt="Catalogo"
-                                        className="h-6 w-6"
-                                    />
-                                    Catalogo
-                                </Link>
-                            </li>
-
-                            {/*Proformas - Admin y Empleado */}
-                            {(rol === 'Administrador' || rol === 'Empleado') && (
-                                <li className={`mb-6 transition delay-75 ease-in-out hover:translate-x-6 hover:scale-110 hover:text-gray-300 ${currentPath === '/proformas' ? 'text-gray-600 bg-white/25 w-[90%] p-1 rounded-[8px]' : ''}`}>
-                                    <Link href="/proformas" className="flex items-center gap-2">
-                                        <img
-                                            src="/assets/icon/facturacion.png"
-                                            alt="Proformas"
-                                            className="h-6 w-6"
-                                        />
-                                        Proformas
-                                    </Link>
-                                </li>
-                            )}
-                            
-
-                            {/*Créditos - Admin y empleado */}
-                            {(rol === 'Administrador' || rol === 'Empleado') && (
-                            <li className={`mb-6 transition delay-75 ease-in-out hover:translate-x-6 hover:scale-110 hover:text-gray-300 ${currentPath === '/creditos' ? 'text-gray-600 bg-white/25 w-[90%] p-1 rounded-[8px]' : ''}`}>
-                                <Link href="/creditos" className="flex items-center gap-2">
-                                    <img
-                                        src="/assets/icon/credito.png"
-                                        alt="Creditos"
-                                        className="h-6 w-6"
-                                    />
-                                    Creditos
-                                </Link>
-                            </li>
-                            )}
-
-                            {/*Inventario - Solo Administrador y empleado */}
-                            {(rol === 'Administrador' || rol === 'Empleado') && (
-                                <li className={`mb-6 transition delay-75 ease-in-out hover:translate-x-6 hover:scale-110 hover:text-gray-300 ${currentPath === '/inventario' ? 'text-gray-600 bg-white/25 w-[90%] p-1 rounded-[8px]' : ''}`}>
-                                    <Link href="/inventario" className="flex items-center gap-2">
-                                        <img
-                                            src="/assets/icon/inventario.png"
-                                            alt="Inventario"
-                                            className="h-6 w-6"
-                                        />
-                                        Inventario
-                                    </Link>
-                                </li>
-                            )}
-
-                            {/*Pedidos - Admin y Empleado */}
-                            {(rol === 'Administrador' || rol === 'Empleado') && (
-                                <li className={`mb-6 transition delay-75 ease-in-out hover:translate-x-6 hover:scale-110 hover:text-gray-300 ${currentPath === '/pedidos' ? 'text-gray-600 bg-white/25 w-[90%] p-1 rounded-[8px]' : ''}`}>
-                                    <Link href="/pedidos" className="flex items-center gap-2">
-                                        <img
-                                            src="/assets/icon/pedido.png"
-                                            alt="Pedidos"
-                                            className="h-6 w-6"
-                                        />
-                                        Pedidos
-                                    </Link>
-                                </li>
-                            )}
-                            {/*Categorías - Solo Administrador */}
-                            {rol === 'Administrador' && (
-                                <li className={`mb-6 transition delay-75 ease-in-out hover:translate-x-6 hover:scale-110 hover:text-gray-300 ${currentPath === '/categorias' ? 'text-gray-600 bg-white/25 w-[90%] p-1 rounded-[8px]' : ''}`}>
-                                    <Link href="/categorias" className="flex items-center gap-2">
-                                        <img
-                                            src="/assets/icon/categorias.png"
-                                            alt="Categorías"
-                                            className="h-9 w-8"
-                                        />
-                                        Categorías
-                                    </Link>
-                                </li>
-                            )}
+                                        <Link href={opcion.href} className="flex items-center gap-2">
+                                            <img src={opcion.icono} alt={opcion.texto} className="h-6 w-6" />
+                                            {opcion.texto}
+                                        </Link>
+                                    </li>
+                                ))}
 
                             <div className="mb-1 flex w-full justify-end border-t border-gray-300 pt-6"></div>
                             <li className="flex w-full justify-end transition delay-75 ease-in-out hover:scale-110">
