@@ -55,7 +55,7 @@ function crearVentaReporte($test, string $fecha, float $total, float $cantidad, 
     return $venta;
 }
 
-test('genera reportes diarios y mensuales de ventas con contado, cr?dito y abonos; regenerar no duplica', function () {
+test('genera reportes diarios y mensuales de ventas con contado, crédito y abonos; regenerar no duplica', function () {
     crearVentaReporte($this, '2026-04-10 10:00:00', 100, 5, 12, false);
     $ventaCredito = crearVentaReporte($this, '2026-04-10 11:00:00', 200, 10, 12, true);
     $credito = Credito::where('fk_venta', $ventaCredito->id_venta)->firstOrFail();
@@ -81,7 +81,7 @@ test('genera reportes diarios y mensuales de ventas con contado, cr?dito y abono
     expect(ReporteVenta::where('tipo_periodo', 'diario')->count())->toBe(1);
 });
 
-test('calcula ganancia neta sobre cobros con costo proporcional de abonos y registra p?rdida', function () {
+test('calcula ganancia neta sobre cobros con costo proporcional de abonos y registra pérdida', function () {
     crearVentaReporte($this, '2026-05-08 09:00:00', 100, 5, 12, false); // costo 60
     $ventaCredito = crearVentaReporte($this, '2026-04-20 09:00:00', 200, 10, 12, true); // costo 120
     $credito = Credito::where('fk_venta', $ventaCredito->id_venta)->firstOrFail();

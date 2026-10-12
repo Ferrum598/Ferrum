@@ -9,6 +9,8 @@ export interface LoteVenta {
 export interface ProductoVenta {
     id_producto: number;
     nombre_producto: string;
+    categoria?: string | null;
+    imagen?: string;
     lotes: LoteVenta[];
 }
 

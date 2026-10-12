@@ -23,7 +23,7 @@ class GastoFijoController extends Controller
         $datos['fk_usuario'] = $request->user()->getAuthIdentifier();
         $datos['activo'] = $request->boolean('activo', true);
         GastoFijo::create($datos);
-        return back()->with('flash', ['title' => 'Gasto agregado', 'icon' => 'success', 'message' => 'El gasto fijo se registr? correctamente.']);
+        return back()->with('flash', ['title' => 'Gasto agregado', 'icon' => 'success', 'message' => 'El gasto fijo se registró correctamente.']);
     }
 
     public function update(Request $request, GastoFijo $gasto)
@@ -38,11 +38,11 @@ class GastoFijoController extends Controller
     {
         if (DetalleReporteGasto::where('fk_gasto', $gasto->getKey())->exists()) {
             $gasto->update(['activo' => false]);
-            $message = 'El gasto ya forma parte de un reporte y se desactiv? para conservar su historial.';
+            $message = 'El gasto ya forma parte de un reporte y se desactivó para conservar su historial.';
             $title = 'Gasto desactivado';
         } else {
             $gasto->delete();
-            $message = 'El gasto fijo se elimin? correctamente.';
+            $message = 'El gasto fijo se eliminó correctamente.';
             $title = 'Gasto eliminado';
         }
         return back()->with('flash', ['title' => $title, 'icon' => 'success', 'message' => $message]);

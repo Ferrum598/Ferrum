@@ -3,7 +3,6 @@ import Tabla from '@/components/Tabla/Tabla';
 import useFlashSwal from '@/components/FlashSwal/useFlashSwal';
 import { Link, Head } from '@inertiajs/react';
 import { PaginadoInventario, ProductoInventario } from '@/components/Interfaces/interfaceInventario';
-import '../../../css/datatable.css';
 
 export default function Inventario({ productos, buscar = '' }: { productos?: PaginadoInventario<ProductoInventario>; buscar?: string }) {
     useFlashSwal();
@@ -16,16 +15,17 @@ export default function Inventario({ productos, buscar = '' }: { productos?: Pag
             </Head>
 
             <SistemaLayout>
-                <div className="flex min-h-[100%] w-[95%] flex-col justify-center gap-5 p-6">
-                    <Tabla productos={productos} buscarInicial={buscar} />
-                    <div className="flex w-full justify-center">
+                <div className="flex min-h-[100%] w-[95%] flex-col gap-6 p-6">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                        <h1 className="bg-gradient-to-r from-slate-900 to-blue-700 bg-clip-text text-3xl font-extrabold text-transparent">📦 Inventario</h1>
                         <Link
                             href="/inventario/agregar"
-                            className="flex h-12 w-full cursor-pointer items-center justify-center rounded-[8px] bg-[#0B0B0B] text-center text-[15px] font-semibold text-white transition duration-300 ease-in-out hover:-translate-y-1 hover:bg-[#282727] sm:w-[60%] md:w-[30%]"
+                            className="cursor-pointer rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-5 py-3 text-center font-semibold text-white shadow-lg transition hover:from-blue-700 hover:to-indigo-700 active:scale-95"
                         >
-                            Agregar un Producto
+                            + Agregar un Producto
                         </Link>
                     </div>
+                    <Tabla productos={productos} buscarInicial={buscar} />
                 </div>
             </SistemaLayout>
         </>

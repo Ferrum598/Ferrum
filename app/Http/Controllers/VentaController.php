@@ -38,21 +38,43 @@ class VentaController extends Controller
     {
         $q = trim((string) $request->query('q', ''));
 
-        $productos = \App\Models\Producto::query()
+        $paginado = \App\Models\Producto::query()
             ->where('activo', true)
             ->whereHas('lotesDisponibles')
             ->when($q !== '', fn($query) => $query->where('nombre_producto', 'like', "%{$q}%"))
-            ->with(['lotesDisponibles' => fn($query) => $query->orderBy('fecha_ingreso')->orderBy('id_lote')])
+            ->with(['categoria:id_categoria,nombre_categoria', 'lotesDisponibles' => fn($query) => $query->orderBy('fecha_ingreso')->orderBy('id_lote')])
             ->orderBy('nombre_producto')
-            ->limit(20)
-            ->get()
-            ->map(fn($p) => [
+            ->paginate(12)
+            ->through(fn($p) => [
                 'id_producto' => $p->id_producto,
                 'nombre_producto' => $p->nombre_producto,
+                'categoria' => $p->categoria?->nombre_categoria,
+                'imagen' => $p->fk_imagen_producto
+                    ? route('ventas.imagen', $p->id_producto) . '?v=' . $p->fk_imagen_producto
+                    : '/assets/productos/no-hay-imagen.jpg',
                 'lotes' => $p->lotesDisponibles->map(fn($l) => $this->formatearLote($l))->values(),
             ]);
 
-        return response()->json($productos);
+        return response()->json($paginado);
+    }
+
+    // Sirve la imagen del producto como archivo cacheable (evita enviar base64 en el listado)
+    public function imagen(int $id)
+    {
+        $producto = \App\Models\Producto::with('imagen')->findOrFail($id);
+        $raw = $producto->imagen?->imagen;
+        if (is_resource($raw)) {
+            $raw = stream_get_contents($raw);
+        }
+        $binario = $raw ? base64_decode($raw, true) : false;
+        if ($binario === false) {
+            abort(404);
+        }
+
+        return response($binario, 200, [
+            'Content-Type' => (new \finfo(FILEINFO_MIME_TYPE))->buffer($binario) ?: 'image/jpeg',
+            'Cache-Control' => 'public, max-age=604800',
+        ]);
     }
 
     // Lote activo con stock asociado a un código de barras

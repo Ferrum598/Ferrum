@@ -143,3 +143,22 @@ test('comprobante se puede ver e imprimir', function () {
         ->assertOk()->assertJsonPath('props.comprobante.numero_comprobante', 'C-000001');
     $this->postJson("/comprobantes/{$id}/impreso")->assertOk()->assertJson(['veces_impreso' => 1]);
 });
+
+test('el catalogo se pagina y la imagen se sirve como archivo', function () {
+    for ($i = 1; $i <= 14; $i++) {
+        $p = Producto::create(['nombre_producto' => "Extra $i", 'activo' => true]);
+        Lote::create([
+            'nombre_lote' => 'L', 'fk_producto' => $p->id_producto, 'precio_compra' => 1, 'precio_venta' => 2,
+            'cantidad' => 5, 'cantidad_disponible' => 5, 'fecha_ingreso' => now()->toDateString(), 'activo' => true,
+        ]);
+    }
+    $r = $this->getJson('/ventas/buscar')->assertOk();
+    expect($r->json('data'))->toHaveCount(12)->and($r->json('last_page'))->toBe(2);
+
+    $png = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==');
+    $img = \App\Models\ImagenProducto::create(['nombre_imagen' => 'x.png', 'imagen' => base64_encode($png)]);
+    $prod = Producto::first();
+    $prod->update(['fk_imagen_producto' => $img->id_imagen_producto]);
+
+    $this->get("/ventas/imagen/{$prod->id_producto}")->assertOk()->assertHeader('Content-Type', 'image/png');
+});

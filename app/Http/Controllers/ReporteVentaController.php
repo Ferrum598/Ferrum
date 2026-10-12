@@ -29,7 +29,7 @@ class ReporteVentaController extends Controller
         ]);
         $reporte = $service->generarReporteVentas($datos['tipo_periodo'], \Carbon\Carbon::parse($datos['fecha']), (int) $request->user()->getAuthIdentifier());
         return redirect()->route('reportes.ventas.detalle', $reporte->getKey())->with('flash', [
-            'title' => 'Reporte generado', 'icon' => 'success', 'message' => 'El reporte de ventas se guard? correctamente.',
+            'title' => 'Reporte generado', 'icon' => 'success', 'message' => 'El reporte de ventas se guardó correctamente.',
         ]);
     }
 
@@ -45,7 +45,7 @@ class ReporteVentaController extends Controller
     {
         $actualizado = $service->generarReporteVentas($reporte->tipo_periodo, \Carbon\Carbon::parse($reporte->fecha_inicio), (int) $request->user()->getAuthIdentifier());
         return redirect()->route('reportes.ventas.detalle', $actualizado->getKey())->with('flash', [
-            'title' => 'Reporte actualizado', 'icon' => 'success', 'message' => 'El reporte se regener? correctamente.',
+            'title' => 'Reporte actualizado', 'icon' => 'success', 'message' => 'El reporte se regeneró correctamente.',
         ]);
     }
 
@@ -53,7 +53,7 @@ class ReporteVentaController extends Controller
     {
         $reporte->delete();
         return redirect()->route('reportes.ventas')->with('flash', [
-            'title' => 'Reporte eliminado', 'icon' => 'success', 'message' => 'El reporte se elimin? correctamente.',
+            'title' => 'Reporte eliminado', 'icon' => 'success', 'message' => 'El reporte se eliminó correctamente.',
         ]);
     }
 }

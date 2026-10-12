@@ -68,8 +68,7 @@ export default function BarraDeNavegacion() {
         <>
             {/* Botón hamburguesa solo en móvil, compacto y sin fondo blanco extra */}
             <button
-                className="fixed z-20 top-2 left-2 md:hidden flex w-auto p-0 rounded bg-[#736D6D] text-white shadow focus:outline-none"
-                style={{marginLeft: 0, marginTop: 0}}
+                className="fixed z-20 top-2 left-2 md:hidden flex w-auto p-1 rounded-xl bg-gradient-to-br from-slate-900 to-blue-900 text-white shadow-lg focus:outline-none"
                 onClick={() => setOpen(true)}
                 aria-label="Abrir menú"
             >
@@ -88,7 +87,7 @@ export default function BarraDeNavegacion() {
 
             {/* Menú lateral */}
             <div
-                className={`fixed z-50 top-0 left-0 h-full bg-[#736D6D] flex flex-col items-center p-4 overflow-y-auto overflow-x-hidden transition-transform duration-300
+                className={`print:hidden fixed z-50 top-0 left-0 h-full bg-gradient-to-b from-slate-900 via-slate-900 to-blue-950 border-r border-white/10 flex flex-col items-center p-4 overflow-y-auto overflow-x-hidden transition-transform duration-300
                 w-4/5 max-w-xs md:w-64 md:max-w-xs md:translate-x-0
                 ${open ? 'translate-x-0' : '-translate-x-full'}
                 md:relative md:top-0 md:left-0 md:translate-x-0 md:flex md:h-screen`}
@@ -110,9 +109,9 @@ export default function BarraDeNavegacion() {
                         <img className="h-8 w-10 bg-white rounded-full transform ease-in-out duration-300 hover:scale-125 border border-gray-200" src="../assets/icon/settings.svg" alt="Settings" />
                     </Link>
                 </div>
-                <div className="mb-6 h-32 w-32 overflow-hidden rounded-full bg-white relative flex items-center justify-center">
+                <div className="mb-4 h-28 w-28 shrink-0 overflow-hidden rounded-full bg-white relative flex items-center justify-center ring-4 ring-blue-500/60 shadow-lg shadow-blue-900/50">
                     <img
-                        className="object-fill h-full w-full"
+                        className="object-cover h-full w-full"
                         src="/images/Avatar.jpg"
                         alt="Profile"
                     />
@@ -127,36 +126,46 @@ export default function BarraDeNavegacion() {
                 {/*Mostrar información del usuario si existe */}
                 {usuario && (
                     <div className="mb-4 text-center text-white">
-                        <p className="text-lg font-semibold">{usuario.nombre}</p>
-                        <p className="text-sm opacity-75">{rol || 'Sin rol'}</p>
+                        <p className="text-lg font-bold">{usuario.nombre}</p>
+                        <span className="mt-1 inline-block rounded-full bg-blue-500/20 px-3 py-0.5 text-xs font-semibold uppercase tracking-wide text-blue-200 border border-blue-400/30">{rol || 'Sin rol'}</span>
                     </div>
                 )}
 
                 <div className="flex w-full flex-col items-center">
-                    <nav className="mb-6 w-full border-t border-gray-300 pt-6 text-3xl text-white">
-                        <ul>
+                    <nav className="mb-6 w-full border-t border-white/10 pt-5 text-base text-slate-200">
+                        <ul className="space-y-1.5">
                             {opcionesMenu
                                 .filter((opcion) => permisos.includes(opcion.permiso))
                                 .map((opcion) => (
                                     <li
                                         key={opcion.href}
-                                        className={`mb-6 transition delay-75 ease-in-out hover:translate-x-6 hover:scale-110 hover:text-gray-300 ${currentPath.startsWith(opcion.href) ? 'text-gray-600 bg-white/25 w-[90%] p-1 rounded-[8px]' : ''}`}
+                                        className="list-none"
                                     >
-                                        <Link href={opcion.href} className="flex items-center gap-2">
-                                            <img src={opcion.icono} alt={opcion.texto} className="h-6 w-6" />
+                                        <Link
+                                            href={opcion.href}
+                                            className={`flex items-center gap-3 rounded-xl px-3 py-2.5 font-medium transition-all duration-200 ${currentPath.startsWith(opcion.href)
+                                                ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-900/40'
+                                                : 'text-slate-300 hover:bg-white/10 hover:text-white hover:translate-x-1'}`}
+                                        >
+                                            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/10">
+                                                <img src={opcion.icono} alt="" className="h-5 w-5 brightness-0 invert" />
+                                            </span>
                                             {opcion.texto}
                                         </Link>
                                     </li>
                                 ))}
 
-                            <div className="mb-1 flex w-full justify-end border-t border-gray-300 pt-6"></div>
-                            <li className="flex w-full justify-end transition delay-75 ease-in-out hover:scale-110">
-                                <a onClick={cerrarSesion} href="#">
-                                    <img
-                                        src="/assets/icon/logout.svg"
-                                        alt="Logout"
-                                        className="h-10 w-10"
-                                    />
+                            <div className="mt-4 border-t border-white/10 pt-4"></div>
+                            <li className="list-none">
+                                <a
+                                    onClick={cerrarSesion}
+                                    href="#"
+                                    className="flex items-center gap-3 rounded-xl px-3 py-2.5 font-medium text-rose-300 transition-all duration-200 hover:bg-rose-500/20 hover:text-rose-200"
+                                >
+                                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-rose-500/20">
+                                        <img src="/assets/icon/logout.svg" alt="" className="h-5 w-5 brightness-0 invert" />
+                                    </span>
+                                    Cerrar sesión
                                 </a>
                             </li>
                         </ul>
