@@ -11,10 +11,8 @@ export default function Categorias({ categorias = [] }: { categorias: Categoria[
     return (
         <SistemaLayout>
             <Head title="Categorías" />
-            <div className="mx-auto w-full space-y-8 px-6 py-8">
-                <div className="flex items-center justify-between">
-                    <h1 className="text-3xl font-bold text-slate-900">Categorías</h1>
-                </div>
+            <div className="mx-auto w-full space-y-6 px-6 py-8">
+                <h1 className="bg-gradient-to-r from-slate-900 to-blue-700 bg-clip-text text-3xl font-extrabold text-transparent">🏷️ Categorías</h1>
                 <FormularioCategorias editando={editando} onCancelar={() => setEditando(null)} />
                 <TablaCategorias categorias={categorias} onEditar={(c) => { setEditando(c); window.scrollTo({ top: 0, behavior: 'smooth' }); }} />
             </div>

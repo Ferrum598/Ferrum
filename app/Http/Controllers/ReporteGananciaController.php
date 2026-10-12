@@ -21,7 +21,7 @@ class ReporteGananciaController extends Controller
         $datos = $request->validate(['mes' => 'required|integer|min:1|max:12', 'anio' => 'required|integer|min:2000|max:2100']);
         $reporte = $service->generarReporteGanancias((int) $datos['mes'], (int) $datos['anio'], (int) $request->user()->getAuthIdentifier());
         return redirect()->route('reportes.ganancias.detalle', $reporte->getKey())->with('flash', [
-            'title' => 'Reporte generado', 'icon' => 'success', 'message' => 'El reporte mensual de ganancias se guard? correctamente.',
+            'title' => 'Reporte generado', 'icon' => 'success', 'message' => 'El reporte mensual de ganancias se guardó correctamente.',
         ]);
     }
 
@@ -34,7 +34,7 @@ class ReporteGananciaController extends Controller
     {
         $reporte->delete();
         return redirect()->route('reportes.ganancias')->with('flash', [
-            'title' => 'Reporte eliminado', 'icon' => 'success', 'message' => 'El reporte mensual se elimin? correctamente.',
+            'title' => 'Reporte eliminado', 'icon' => 'success', 'message' => 'El reporte mensual se eliminó correctamente.',
         ]);
     }
 }

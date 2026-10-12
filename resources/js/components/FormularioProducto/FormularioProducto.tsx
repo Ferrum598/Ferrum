@@ -15,7 +15,8 @@ interface ProductoForm {
     fecha_ingreso: string;
 }
 
-const inputClase = 'w-full rounded-[10px] border border-gray-300 p-2';
+const inputClase = 'w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 transition focus:outline-none focus:ring-2 focus:ring-blue-500';
+const labelClase = 'text-sm font-medium text-slate-700';
 const hoy = () => new Date().toISOString().slice(0, 10);
 
 export default function FormularioProducto({ producto, categorias }: { producto?: ProductoEdicion; categorias?: Categoria[] }) {
@@ -47,61 +48,70 @@ export default function FormularioProducto({ producto, categorias }: { producto?
         post(producto ? `/inventario/${producto.id_producto}/actualizar` : '/inventario/guardar', { forceFormData: true });
     };
 
-    const error = (campo: keyof ProductoForm) => errors[campo] && <span className="text-red-500">{errors[campo]}</span>;
+    const error = (campo: keyof ProductoForm) => errors[campo] && <span className="text-sm text-red-600">{errors[campo]}</span>;
+    const campo = (id: keyof ProductoForm, etiqueta: string, props: React.InputHTMLAttributes<HTMLInputElement> = {}) => (
+        <div className="flex flex-col gap-1">
+            <label htmlFor={id} className={labelClase}>{etiqueta}</label>
+            <input id={id} className={inputClase} value={data[id] as string} onChange={(e) => setData(id, e.target.value as never)} {...props} />
+            {error(id)}
+        </div>
+    );
 
     return (
-        <div className="flex h-full w-full flex-col items-center justify-center gap-5 px-2">
-            <div className="w-full max-w-xs rounded-[5px] border-2 border-gray-300 p-2 sm:max-w-sm md:max-w-md">
-                <img className="h-full w-full object-cover" src={imagenPreview || producto?.imagen || '/assets/productos/no-hay-imagen.jpg'} alt="producto" />
-            </div>
+        <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-8">
+            <h1 className="bg-gradient-to-r from-slate-900 to-blue-700 bg-clip-text text-3xl font-extrabold text-transparent">
+                {producto ? '✏️ Editar producto' : '📦 Agregar producto'}
+            </h1>
 
-            <form onSubmit={handleSubmit} className="flex w-full flex-col items-center justify-center gap-5">
-                <div className="flex w-full flex-col justify-center gap-5 md:flex-row">
-                    <div className="flex w-full flex-col gap-3 md:w-1/2">
-                        <label htmlFor="nombre_producto">Nombre del Producto</label>
-                        <input id="nombre_producto" className={inputClase} type="text" value={data.nombre_producto} onChange={(e) => setData('nombre_producto', e.target.value)} placeholder="Producto" />
-                        {error('nombre_producto')}
-                        <label htmlFor="descripcion">Descripción del Producto</label>
-                        <textarea id="descripcion" className={inputClase} value={data.descripcion} onChange={(e) => setData('descripcion', e.target.value)} placeholder="Descripción" rows={4} maxLength={255} />
-                        {error('descripcion')}
-                        <label htmlFor="fk_categoria">Categoría del Producto</label>
-                        <select id="fk_categoria" className={inputClase} value={data.fk_categoria} onChange={(e) => setData('fk_categoria', e.target.value === '' ? '' : Number(e.target.value))}>
-                            <option value="">Seleccione una categoría</option>
-                            {categorias?.map((c) => (
-                                <option key={c.id_categoria} value={c.id_categoria}>
-                                    {c.nombre_categoria}
-                                </option>
-                            ))}
-                        </select>
-                        {error('fk_categoria')}
-                        <label htmlFor="imagen">Imagen del Producto</label>
-                        <input id="imagen" className={inputClase} type="file" accept="image/*" onChange={(e) => setData('imagen', e.target.files?.[0] || null)} />
-                        {error('imagen')}
+            <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+                <div className="grid gap-6 md:grid-cols-2">
+                    <div className="flex flex-col gap-4 rounded-2xl border border-slate-100 bg-white p-6 shadow-md">
+                        <h2 className="font-semibold text-slate-800">Datos del producto</h2>
+                        <div className="mx-auto w-full max-w-[220px] overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-100 to-slate-200 shadow-sm">
+                            <img className="aspect-square w-full object-cover" src={imagenPreview || producto?.imagen || '/assets/productos/no-hay-imagen.jpg'} alt="producto" />
+                        </div>
+                        {campo('nombre_producto', 'Nombre del Producto', { type: 'text', placeholder: 'Producto' })}
+                        <div className="flex flex-col gap-1">
+                            <label htmlFor="descripcion" className={labelClase}>Descripción del Producto</label>
+                            <textarea id="descripcion" className={inputClase} value={data.descripcion} onChange={(e) => setData('descripcion', e.target.value)} placeholder="Descripción" rows={4} maxLength={255} />
+                            {error('descripcion')}
+                        </div>
+                        <div className="flex flex-col gap-1">
+                            <label htmlFor="fk_categoria" className={labelClase}>Categoría del Producto</label>
+                            <select id="fk_categoria" className={inputClase} value={data.fk_categoria} onChange={(e) => setData('fk_categoria', e.target.value === '' ? '' : Number(e.target.value))}>
+                                <option value="">Seleccione una categoría</option>
+                                {categorias?.map((c) => (
+                                    <option key={c.id_categoria} value={c.id_categoria}>
+                                        {c.nombre_categoria}
+                                    </option>
+                                ))}
+                            </select>
+                            {error('fk_categoria')}
+                        </div>
+                        <div className="flex flex-col gap-1">
+                            <label htmlFor="imagen" className={labelClase}>Imagen del Producto</label>
+                            <input id="imagen" className={`${inputClase} file:mr-3 file:rounded-lg file:border-0 file:bg-blue-100 file:px-3 file:py-1 file:text-blue-700`} type="file" accept="image/*" onChange={(e) => setData('imagen', e.target.files?.[0] || null)} />
+                            {error('imagen')}
+                        </div>
                     </div>
 
                     {!producto && (
-                        <div className="flex w-full flex-col gap-3 md:w-1/2">
-                            <h2 className="font-semibold">Primer lote</h2>
-                            <label htmlFor="nombre_lote">Nombre del Lote</label>
-                            <input id="nombre_lote" className={inputClase} type="text" value={data.nombre_lote} onChange={(e) => setData('nombre_lote', e.target.value)} placeholder="Ej. Lote enero" />
-                            {error('nombre_lote')}
-                            <label htmlFor="precio_compra">Precio de Compra</label>
-                            <input id="precio_compra" className={inputClase} type="number" min="0" step="0.01" value={data.precio_compra} onChange={(e) => setData('precio_compra', e.target.value)} placeholder="0.00" />
-                            {error('precio_compra')}
-                            <label htmlFor="precio_venta">Precio de Venta</label>
-                            <input id="precio_venta" className={inputClase} type="number" min="0" step="0.01" value={data.precio_venta} onChange={(e) => setData('precio_venta', e.target.value)} placeholder="0.00" />
-                            {error('precio_venta')}
-                            <label htmlFor="cantidad">Cantidad</label>
-                            <input id="cantidad" className={inputClase} type="number" min="0" step="1" value={data.cantidad} onChange={(e) => setData('cantidad', e.target.value)} placeholder="Cantidad" />
-                            {error('cantidad')}
-                            <label htmlFor="fecha_ingreso">Fecha de Ingreso</label>
-                            <input id="fecha_ingreso" className={inputClase} type="date" value={data.fecha_ingreso} onChange={(e) => setData('fecha_ingreso', e.target.value)} />
-                            {error('fecha_ingreso')}
+                        <div className="flex h-fit flex-col gap-4 rounded-2xl border border-slate-100 bg-white p-6 shadow-md">
+                            <h2 className="font-semibold text-slate-800">📥 Primer lote</h2>
+                            {campo('nombre_lote', 'Nombre del Lote', { type: 'text', placeholder: 'Ej. Lote enero' })}
+                            <div className="grid grid-cols-2 gap-4">
+                                {campo('precio_compra', 'Precio de Compra', { type: 'number', min: 0, step: '0.01', placeholder: '0.00' })}
+                                {campo('precio_venta', 'Precio de Venta', { type: 'number', min: 0, step: '0.01', placeholder: '0.00' })}
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                {campo('cantidad', 'Cantidad', { type: 'number', min: 0, step: 1, placeholder: 'Cantidad' })}
+                                {campo('fecha_ingreso', 'Fecha de Ingreso', { type: 'date' })}
+                            </div>
                         </div>
                     )}
                 </div>
                 <button
-                    className="w-full cursor-pointer rounded-[8px] bg-[#0B0B0B] p-2 font-semibold text-white transition duration-300 ease-in-out hover:-translate-y-1 hover:bg-[#282727] disabled:opacity-50 md:w-1/3"
+                    className="w-full cursor-pointer self-center rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 p-3 font-semibold text-white shadow-lg transition hover:from-blue-700 hover:to-indigo-700 active:scale-[0.98] disabled:opacity-50 md:w-1/3"
                     type="submit"
                     disabled={processing}
                 >
