@@ -2,277 +2,266 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use Inertia\Inertia;
-use App\Models\Producto;
-use App\Models\ImagenProducto;
 use App\Models\Categoria;
+use App\Models\CodigoBarra;
+use App\Models\ImagenProducto;
+use App\Models\Lote;
+use App\Models\Producto;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-
+use Inertia\Inertia;
 
 class InventarioController extends Controller
 {
+    private const MENSAJES = [
+        'nombre_producto.required' => 'El nombre del producto es obligatorio.',
+        'nombre_producto.max' => 'El nombre del producto no puede superar 100 caracteres.',
+        'descripcion.max' => 'La descripción no puede superar 255 caracteres.',
+        'fk_categoria.exists' => 'La categoría seleccionada no existe.',
+        'imagen.image' => 'El archivo debe ser una imagen.',
+        'imagen.max' => 'La imagen no puede pesar más de 2 MB.',
+        'nombre_lote.max' => 'El nombre del lote no puede superar 100 caracteres.',
+        'precio_compra.required' => 'El precio de compra es obligatorio.',
+        'precio_compra.numeric' => 'El precio de compra debe ser un número.',
+        'precio_compra.min' => 'El precio de compra no puede ser negativo.',
+        'precio_venta.required' => 'El precio de venta es obligatorio.',
+        'precio_venta.numeric' => 'El precio de venta debe ser un número.',
+        'precio_venta.min' => 'El precio de venta no puede ser negativo.',
+        'cantidad.required' => 'La cantidad es obligatoria.',
+        'cantidad.integer' => 'La cantidad debe ser un número entero.',
+        'cantidad.min' => 'La cantidad no puede ser negativa.',
+        'cantidad_disponible.required' => 'La cantidad disponible es obligatoria.',
+        'cantidad_disponible.integer' => 'La cantidad disponible debe ser un número entero.',
+        'cantidad_disponible.min' => 'La cantidad disponible no puede ser negativa.',
+        'fecha_ingreso.required' => 'La fecha de ingreso es obligatoria.',
+        'fecha_ingreso.date' => 'La fecha de ingreso no es válida.',
+        'activo.required' => 'Indique si el lote está activo.',
+    ];
+
+    private const REGLAS_PRODUCTO = [
+        'nombre_producto' => 'required|string|max:100',
+        'descripcion' => 'nullable|string|max:255',
+        'fk_categoria' => 'nullable|integer|exists:categorias,id_categoria',
+        'imagen' => 'nullable|image|max:2048',
+    ];
+
+    private const REGLAS_LOTE = [
+        'nombre_lote' => 'nullable|string|max:100',
+        'precio_compra' => 'required|numeric|min:0|max:99999999.99',
+        'precio_venta' => 'required|numeric|min:0|max:99999999.99',
+        'fecha_ingreso' => 'required|date',
+    ];
+
+    private function flash(string $icon, string $title, string $message): array
+    {
+        return ['title' => $title, 'icon' => $icon, 'message' => $message];
+    }
+
     public function index(Request $request)
     {
-        $perPage = $request->input('per_page', 10); // Por defecto 10 por página
-        $buscar = $request->input('buscar');
-        $query = Producto::select([
-            'id_producto',
-            'producto',
-            'descripcion',
-            'estado',
-            'estatus',
-            'precio',
-            'cantidad',
-            'fk_id_imagen',
-        ])->where('estatus', 'activo');
+        $perPage = max(1, min(100, (int) $request->input('per_page', 10)));
+        $buscar = trim((string) $request->input('buscar', ''));
 
-        if ($buscar) {
-            $query->where('producto', 'like', "%$buscar%");
+        $query = Producto::with(['categoria', 'imagen', 'lotes' => fn ($q) => $q->orderByDesc('fecha_ingreso')->orderByDesc('id_lote')])
+            ->where('activo', true)
+            ->orderBy('nombre_producto');
+
+        if ($buscar !== '') {
+            $like = '%' . mb_strtolower($buscar) . '%';
+            $query->where(function ($q) use ($like) {
+                $q->whereRaw('LOWER(nombre_producto) LIKE ?', [$like])
+                    ->orWhereHas('lotes.codigos', fn ($c) => $c->whereRaw('LOWER(codigo) LIKE ?', [$like]));
+            });
         }
 
-        $productos = $query->paginate($perPage);
+        $productos = $query->paginate($perPage)->withQueryString();
 
-        // Obtener solo las imágenes de los productos en la página actual
-        $imagenes = ImagenProducto::whereIn('id_imagen', $productos->pluck('fk_id_imagen'))
-            ->get()
-            ->map(function ($img) {
-                $binario = is_resource($img->imagen_producto)
-                    ? stream_get_contents($img->imagen_producto)
-                    : $img->imagen_producto;
-                return [
-                    'id_imagen' => $img->id_imagen,
-                    'imagen' => $img->imagen_producto !== null ? 'data:image/jpeg;base64,' . $binario : '/assets/productos/no-hay-imagen.jpg',
-                ];
-            });
-
-        return Inertia::render('Inventario/Inventario', [
-            'productos' => $productos,
-            'imagenes' => $imagenes,
-        ]);
-    }
-    public function editarDatos(Request $request)
-    {
-        $id = $request->input('id');
-        $imagenes = ImagenProducto::where('id_imagen', $id)->get()->map(function ($img) {
-            $binario = is_resource($img->imagen_producto)
-                ? stream_get_contents($img->imagen_producto)
-                : $img->imagen_producto;
+        $productos->getCollection()->transform(function (Producto $p) {
             return [
-                'id_imagen' => $img->id_imagen,
-                'imagen' => $img->imagen_producto !== null ? 'data:image/jpeg;base64,' . $binario : '/assets/productos/no-hay-imagen.jpg',
+                'id_producto' => $p->id_producto,
+                'nombre_producto' => $p->nombre_producto,
+                'descripcion' => $p->descripcion,
+                'categoria' => $p->categoria?->nombre_categoria,
+                'imagen' => $p->imagen ? $p->imagen->dataUri() : '/assets/productos/no-hay-imagen.jpg',
+                'existencias' => (int) $p->lotes->where('activo', true)->sum('cantidad_disponible'),
+                'lotes' => $p->lotes->map(fn (Lote $l) => [
+                    'id_lote' => $l->id_lote,
+                    'nombre_lote' => $l->nombre_lote,
+                    'precio_compra' => (float) $l->precio_compra,
+                    'precio_venta' => (float) $l->precio_venta,
+                    'cantidad' => $l->cantidad,
+                    'cantidad_disponible' => $l->cantidad_disponible,
+                    'fecha_ingreso' => $l->fecha_ingreso?->format('Y-m-d'),
+                    'activo' => $l->activo,
+                ])->values(),
             ];
         });
 
-        $productos = Producto::select([
-            'id_producto',
-            'producto',
-            'producto_plural',
-            'descripcion',
-            'codigo_barra',
-            'precio',
-            'cantidad',
-            'fk_id_categoria',
-        ])->where('id_producto', $id)->get();
-
-        $categorias = Categoria::all();
-
-        return Inertia::render('EditarProducto/EditarProducto', [
+        return Inertia::render('Inventario/Inventario', [
             'productos' => $productos,
-            'imagenes' => $imagenes,
-            'categorias' => $categorias,
+            'buscar' => $buscar,
         ]);
     }
-    public function actualizar(Request $request)
+
+    public function crear()
     {
-        $datos = $request->validate([
-            'id' => 'required|integer',
-            'producto' => 'required|string|max:100',
-            'producto_plural' => 'required|string|max:100',
-            'descripcion' => 'nullable|string|max:255',
-            'codigo_barra' => 'required|string',
-            'precio' => 'required|numeric',
-            'cantidad' => 'required|integer',
-            'imagen' => 'nullable|image|max:2048',
-            'categoria' => 'required|numeric',
-        ], [
-            'producto.required' => 'El nombre del producto es obligatorio.',
-            'codigo_barra.required' => 'El código de barra es obligatorio.',
-            'producto_plural.required' => 'El nombre del producto plural es obligatorio.',
-            'producto.string' => 'El nombre del producto debe ser una cadena de texto.',
-            'producto.max' => 'El nombre del producto no debe exceder los 100 caracteres.',
-            'descripcion.string' => 'La descripción debe ser una cadena de texto.',
-            'descripcion.max' => 'La descripción no debe exceder los 255 caracteres.',
-            'precio.required' => 'El precio es obligatorio.',
-            'precio.numeric' => 'El precio debe ser un número.',
-            'cantidad.required' => 'La cantidad es obligatoria.',
-            'cantidad.integer' => 'La cantidad debe ser un número entero.',
-            'imagen.image' => 'El archivo debe ser una imagen válida.',
-            'imagen.max' => 'El tamaño de la imagen no debe exceder los 2MB.',
-            'categoria.required' => 'La categoría es obligatoria.',
-        ]);
-
-        try {
-            DB::beginTransaction();
-
-            $producto = Producto::find($datos['id']);
-
-            // Actualiza la imagen solo si se envía una nueva
-            if ($request->hasFile('imagen')) {
-                $archivo = $request->file('imagen');
-                $nuevaImagen = base64_encode(file_get_contents($archivo->getRealPath()));
-                $guardarImagen = ImagenProducto::find($producto->fk_id_imagen);
-                $guardarImagen->imagen_producto = $nuevaImagen;
-                $guardarImagen->save();
-            }
-
-            Producto::where('id_producto', $datos['id'])->update([
-                'producto' => $datos['producto'],
-                'producto_plural' => $datos['producto_plural'],
-                'descripcion' => $datos['descripcion'],
-                'codigo_barra' => $datos['codigo_barra'],
-                'precio' => (float)$datos['precio'],
-                'cantidad' => (int)$datos['cantidad'],
-                'fk_id_categoria' => $datos['categoria'],
-            ]);
-
-            DB::commit();
-            return redirect()->route('inventario.index')->with('flash', [
-                'title' => 'Actualización exitosa',
-                'message' => 'El producto se ha actualizado correctamente.',
-                'icon' => 'success'
-            ]);
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return redirect()->route('inventario.index')->with('flash', [
-                'title' => 'Error',
-                'message' => 'Hubo un problema al actualizar el producto.',
-                'icon' => 'error'
-            ]);
-        }
-    }
-    public function eliminar(Request $request)
-    {
-        $id = $request->input('id');
-        $producto = Producto::find($id);
-        try {
-            DB::beginTransaction();
-            if ($producto) {
-                $producto->estatus = 'inactivo';
-                $producto->save();
-                DB::commit();
-                return redirect()->route('inventario.index')->with('flash', [
-                    'title' => 'Eliminación exitosa',
-                    'message' => 'El producto se ha eliminado correctamente.',
-                    'icon' => 'success'
-                ]);
-            }
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return redirect()->route('inventario.index')->with('flash', [
-                'title' => 'Error',
-                'message' => 'Hubo un problema al eliminar el producto.',
-                'icon' => 'error'
-            ]);
-        }
-    }
-    public function actualizarEstado(Request $request)
-    {
-        $id = $request->input('id');
-        $producto = Producto::find($id);
-        try {
-            DB::beginTransaction();
-            if ($producto) {
-                $producto->estado = ($producto->estado === 'mostrado') ? 'oculto' : 'mostrado';
-                $producto->save();
-                DB::commit();
-                return redirect()->route('inventario.index')->with('flash', [
-                    'title' => 'Actualización de estado exitosa',
-                    'message' => 'El estado del producto se ha actualizado correctamente.',
-                    'icon' => 'success'
-                ]);
-            }
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return redirect()->route('inventario.index')->with('flash', [
-                'title' => 'Error',
-                'message' => 'Hubo un error al actualizar el estado del producto.',
-                'icon' => 'error'
-            ]);
-        }
-    }
-    public function agregar()
-    {
-        $categorias = Categoria::all();
         return Inertia::render('AgregarProducto/AgregarProducto', [
-            'categorias' => $categorias,
+            'categorias' => Categoria::orderBy('nombre_categoria')->get(['id_categoria', 'nombre_categoria']),
         ]);
     }
+
     public function guardar(Request $request)
     {
+        $datos = $request->validate(array_merge(self::REGLAS_PRODUCTO, self::REGLAS_LOTE, [
+            'cantidad' => 'required|integer|min:0|max:99999999',
+        ]), self::MENSAJES);
 
-        $datos = $request->validate([
-            'producto' => 'required|string|max:100',
-            'producto_plural' => 'required|string|max:100',
-            'descripcion' => 'nullable|string|max:255',
-            'codigo_barra' => 'required|string',
-            'precio' => 'required|numeric',
-            'cantidad' => 'required|integer',
-            'imagen' => 'nullable|image|max:2048',
-            'categoria' => 'required|numeric',
-        ], [
-            'producto.required' => 'El nombre del producto es obligatorio.',
-            'codigo_barra.required' => 'El código de barra es obligatorio.',
-            'producto_plural.required' => 'El nombre del producto plural es obligatorio.',
-            'producto.string' => 'El nombre del producto debe ser una cadena de texto.',
-            'producto.max' => 'El nombre del producto no debe exceder los 100 caracteres.',
-            'descripcion.string' => 'La descripción debe ser una cadena de texto.',
-            'descripcion.max' => 'La descripción no debe exceder los 255 caracteres.',
-            'precio.required' => 'El precio es obligatorio.',
-            'precio.numeric' => 'El precio debe ser un número.',
-            'cantidad.required' => 'La cantidad es obligatoria.',
-            'cantidad.integer' => 'La cantidad debe ser un número entero.',
-            'imagen.image' => 'El archivo debe ser una imagen válida.',
-            'imagen.max' => 'El tamaño de la imagen no debe exceder los 2MB.',
-            'categoria.required' => 'La categoría es obligatoria.',
+        DB::transaction(function () use ($request, $datos) {
+            $imagen = $request->hasFile('imagen') ? ImagenProducto::desdeArchivo($request->file('imagen')) : null;
+
+            $producto = Producto::create([
+                'nombre_producto' => $datos['nombre_producto'],
+                'descripcion' => $datos['descripcion'] ?? null,
+                'fk_categoria' => $datos['fk_categoria'] ?? null,
+                'fk_imagen_producto' => $imagen?->id_imagen_producto,
+                'activo' => true,
+            ]);
+
+            $lote = $producto->lotes()->create([
+                'nombre_lote' => $datos['nombre_lote'] ?? null,
+                'precio_compra' => $datos['precio_compra'],
+                'precio_venta' => $datos['precio_venta'],
+                'cantidad' => $datos['cantidad'],
+                'cantidad_disponible' => $datos['cantidad'],
+                'fecha_ingreso' => $datos['fecha_ingreso'],
+                'activo' => true,
+            ]);
+
+            CodigoBarra::generarParaLote($lote, Auth::id());
+        });
+
+        return redirect()->route('inventario.index')->with('flash', $this->flash('success', 'Producto agregado', 'El producto y su primer lote se registraron correctamente.'));
+    }
+
+    public function editar(Producto $producto)
+    {
+        return Inertia::render('EditarProducto/EditarProducto', [
+            'producto' => [
+                'id_producto' => $producto->id_producto,
+                'nombre_producto' => $producto->nombre_producto,
+                'descripcion' => $producto->descripcion,
+                'fk_categoria' => $producto->fk_categoria,
+                'imagen' => $producto->imagen ? $producto->imagen->dataUri() : null,
+            ],
+            'categorias' => Categoria::orderBy('nombre_categoria')->get(['id_categoria', 'nombre_categoria']),
+        ]);
+    }
+
+    public function actualizar(Request $request, Producto $producto)
+    {
+        $datos = $request->validate(self::REGLAS_PRODUCTO, self::MENSAJES);
+
+        DB::transaction(function () use ($request, $datos, $producto) {
+            if ($request->hasFile('imagen')) {
+                $imagen = ImagenProducto::desdeArchivo($request->file('imagen'));
+                $producto->fk_imagen_producto = $imagen->id_imagen_producto;
+            }
+            $producto->nombre_producto = $datos['nombre_producto'];
+            $producto->descripcion = $datos['descripcion'] ?? null;
+            $producto->fk_categoria = $datos['fk_categoria'] ?? null;
+            $producto->save();
+        });
+
+        return redirect()->route('inventario.index')->with('flash', $this->flash('success', 'Producto actualizado', 'Los datos del producto se actualizaron correctamente.'));
+    }
+
+    // Baja lógica: nunca se borra físicamente porque las ventas referencian sus lotes
+    public function eliminar(Producto $producto)
+    {
+        DB::transaction(function () use ($producto) {
+            $producto->update(['activo' => false]);
+            $producto->lotes()->update(['activo' => false]);
+        });
+
+        return redirect()->route('inventario.index')->with('flash', $this->flash('success', 'Producto eliminado', 'El producto y sus lotes fueron dados de baja.'));
+    }
+
+    public function crearLote(Producto $producto)
+    {
+        return Inertia::render('AgregarLote/AgregarLote', [
+            'producto' => ['id_producto' => $producto->id_producto, 'nombre_producto' => $producto->nombre_producto],
+            'lote' => null,
+        ]);
+    }
+
+    public function guardarLote(Request $request, Producto $producto)
+    {
+        $datos = $request->validate(array_merge(self::REGLAS_LOTE, [
+            'cantidad' => 'required|integer|min:0|max:99999999',
+        ]), self::MENSAJES);
+
+        DB::transaction(function () use ($producto, $datos) {
+            $lote = $producto->lotes()->create([
+                'nombre_lote' => $datos['nombre_lote'] ?? null,
+                'precio_compra' => $datos['precio_compra'],
+                'precio_venta' => $datos['precio_venta'],
+                'cantidad' => $datos['cantidad'],
+                'cantidad_disponible' => $datos['cantidad'],
+                'fecha_ingreso' => $datos['fecha_ingreso'],
+                'activo' => true,
+            ]);
+            CodigoBarra::generarParaLote($lote, Auth::id());
+        });
+
+        return redirect()->route('inventario.index')->with('flash', $this->flash('success', 'Lote agregado', 'El nuevo lote se registró correctamente.'));
+    }
+
+    public function editarLote(Lote $lote)
+    {
+        $lote->load('producto');
+
+        return Inertia::render('AgregarLote/AgregarLote', [
+            'producto' => ['id_producto' => $lote->producto->id_producto, 'nombre_producto' => $lote->producto->nombre_producto],
+            'lote' => [
+                'id_lote' => $lote->id_lote,
+                'nombre_lote' => $lote->nombre_lote,
+                'precio_compra' => (float) $lote->precio_compra,
+                'precio_venta' => (float) $lote->precio_venta,
+                'cantidad' => $lote->cantidad,
+                'cantidad_disponible' => $lote->cantidad_disponible,
+                'fecha_ingreso' => $lote->fecha_ingreso?->format('Y-m-d'),
+                'activo' => $lote->activo,
+            ],
+        ]);
+    }
+
+    public function actualizarLote(Request $request, Lote $lote)
+    {
+        $datos = $request->validate(array_merge(self::REGLAS_LOTE, [
+            'cantidad_disponible' => 'required|integer|min:0|max:99999999',
+            'activo' => 'required|boolean',
+        ]), self::MENSAJES);
+
+        $disponible = (int) $datos['cantidad_disponible'];
+        $activo = (bool) $datos['activo'];
+
+        // Reposición de un lote agotado: se reactiva
+        if ($lote->cantidad_disponible === 0 && $disponible > 0) {
+            $activo = true;
+        }
+
+        $lote->update([
+            'nombre_lote' => $datos['nombre_lote'] ?? null,
+            'precio_compra' => $datos['precio_compra'],
+            'precio_venta' => $datos['precio_venta'],
+            'fecha_ingreso' => $datos['fecha_ingreso'],
+            'cantidad_disponible' => $disponible,
+            // Si se repone por encima de lo ingresado, la cantidad total se ajusta
+            'cantidad' => max($lote->cantidad, $disponible),
+            'activo' => $activo,
         ]);
 
-        try {
-            DB::beginTransaction();
-
-            $nuevaImagen = null;
-            if ($request->hasFile('imagen')) {
-                $archivo = $request->file('imagen');
-                $nuevaImagen = base64_encode(file_get_contents($archivo->getRealPath()));
-            }
-            $imagen = ImagenProducto::create([
-                'imagen_producto' => $nuevaImagen,
-            ]);
-            Producto::create([
-                'producto' => $datos['producto'],
-                'producto_plural' => $datos['producto_plural'],
-                'descripcion' => $datos['descripcion'],
-                'codigo_barra' => $datos['codigo_barra'],
-                'precio' => (float)$datos['precio'],
-                'cantidad' => (int)$datos['cantidad'],
-                'estado' => 'mostrado',
-                'estatus' => 'activo',
-                'fk_id_imagen' => $imagen->id_imagen,
-                'fk_id_categoria' => $datos['categoria'],
-            ]);
-            DB::commit();
-            return redirect()->route('inventario.index')->with('flash', [
-                'title' => 'Producto agregado',
-                'message' => 'El producto se ha agregado correctamente.',
-                'icon' => 'success'
-            ]);
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return redirect()->route('inventario.index')->with('flash', [
-                'title' => 'Error',
-                'message' => 'Hubo un problema al agregar el producto.',
-                'icon' => 'error'
-            ]);
-        }
+        return redirect()->route('inventario.index')->with('flash', $this->flash('success', 'Lote actualizado', 'Los datos del lote se actualizaron correctamente.'));
     }
 }

@@ -1,29 +1,20 @@
 import SistemaLayout from "@/layouts/SistemaLayout/SistemaLayout";
 import TablaCreditos from "@/components/TablaCreditos/TablaCreditos";
-import { router, Head } from "@inertiajs/react";
-import '../../../css/datatable.css';
-export default function Creditos({ usuarios, clientes}: { usuarios?: any, clientes?: any}) {
-    return (
-        <>
-            <SistemaLayout>
-            <Head title="Creditos" />
-            <main className="flex flex-col w-full h-[90vh] mt-10 gap-3">
-                <div className="w-full max-h-[75vh] overflow-auto">
-                <TablaCreditos usuarios={usuarios} clientes={clientes} />
-                </div>
-                    <div className="flex justify-between">
-                        <button onClick={() => router.get('/creditos/agregar')} className="cursor-pointer w-[30%] bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition duration-300 ease-in-out hover:scale-105">
-                            Agregar Crédito
-                        </button>
-                        <button onClick={() => router.get('/creditos/abonarCredito')} className="cursor-pointer w-[30%] bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded transition duration-300 ease-in-out hover:scale-105">
-                            Pagar Crédito
-                        </button>
-                        <button onClick={() => router.get('/creditos/abonarSaldo')} className="cursor-pointer w-[30%] bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded transition duration-300 ease-in-out hover:scale-105">
-                            Abonar Saldo
-                        </button>
-                    </div>
-            </main>
-            </SistemaLayout>
-        </>
-    );
+import type { Credito } from "@/components/Interfaces/interfaceCreditos";
+import { Head, Link, router } from "@inertiajs/react";
+
+interface Paginacion { data: Credito[]; links: { url: string | null; label: string; active: boolean }[] }
+interface Props { creditos: Paginacion; clientes: { id_cliente: number; nombre_cliente: string; apellido_cliente: string }[]; resumenClientes: { fk_cliente: number; deuda_total: string; cliente: { id_cliente: number; nombre_cliente: string; apellido_cliente: string } }[]; totales: { deuda_total: number; deuda_vencida: number }; filtros: Record<string, string> }
+export default function Creditos({ creditos, clientes, resumenClientes, totales, filtros }: Props) {
+    const filtrar = (key: string, value: string) => router.get("/creditos", { ...filtros, [key]: value || undefined }, { preserveState: true, replace: true });
+    return <SistemaLayout><Head title="Créditos" /><main className="mx-auto flex w-full max-w-7xl flex-col gap-4 py-4">
+        <div className="flex flex-wrap items-center justify-between gap-3"><h1 className="text-2xl font-bold">Créditos</h1><Link href="/clientes" className="rounded bg-blue-500 px-4 py-2 font-bold text-white hover:bg-blue-700">Administrar clientes</Link></div>
+        <section className="grid gap-3 sm:grid-cols-2"><div className="rounded bg-blue-100 p-4"><p>Deuda pendiente</p><strong className="text-xl">Q{totales.deuda_total.toFixed(2)}</strong></div><div className="rounded bg-red-100 p-4 text-red-900"><p>Deuda vencida</p><strong className="text-xl">Q{totales.deuda_vencida.toFixed(2)}</strong></div></section>
+        <div className="grid gap-3 sm:grid-cols-4"><select className="rounded border p-2" value={filtros.estado ?? ""} onChange={e => filtrar("estado", e.target.value)}><option value="">Todos los estados</option>{["pendiente", "vencido", "pagado"].map(x => <option key={x} value={x}>{x}</option>)}</select>
+            <select className="rounded border p-2" value={filtros.cliente ?? ""} onChange={e => filtrar("cliente", e.target.value)}><option value="">Todos los clientes</option>{clientes.map(c => <option key={c.id_cliente} value={c.id_cliente}>{c.nombre_cliente} {c.apellido_cliente}</option>)}</select>
+            <label className="flex items-center gap-2">Desde<input className="w-full rounded border p-2" type="date" value={filtros.desde ?? ""} onChange={e => filtrar("desde", e.target.value)} /></label><label className="flex items-center gap-2">Hasta<input className="w-full rounded border p-2" type="date" value={filtros.hasta ?? ""} onChange={e => filtrar("hasta", e.target.value)} /></label></div>
+        <TablaCreditos creditos={creditos.data} />
+        <nav className="flex flex-wrap gap-2">{creditos.links.map((link, i) => <button key={i} disabled={!link.url} onClick={() => link.url && router.visit(link.url, { preserveState: true })} className={`rounded border px-3 py-1 ${link.active ? "bg-blue-600 text-white" : "bg-white"}`} dangerouslySetInnerHTML={{ __html: link.label }} />)}</nav>
+        <section className="overflow-auto rounded bg-white p-4 shadow"><h2 className="mb-2 text-xl font-bold">Deuda por cliente</h2><table className="w-full text-left"><thead><tr className="border-b bg-gray-100"><th className="p-2">Cliente</th><th className="p-2">Deuda</th></tr></thead><tbody>{resumenClientes.map(item => <tr key={item.fk_cliente} className="border-b"><td className="p-2"><Link className="text-blue-600 underline" href={`/clientes/${item.fk_cliente}/detalle`}>{item.cliente.nombre_cliente} {item.cliente.apellido_cliente}</Link></td><td className="p-2">Q{Number(item.deuda_total).toFixed(2)}</td></tr>)}</tbody></table></section>
+    </main></SistemaLayout>;
 }

@@ -39,25 +39,26 @@ class HandleInertiaRequests extends Middleware
     {
         [$message, $author] = str(Inspiring::quotes()->random())->explode('-');
 
-        $imagenPerfil = null;
-        if (Auth::check() && Auth::user()->fk_id_imagen) {
-            $imagen = \App\Models\Imagen::find(Auth::user()->fk_id_imagen);
-            if ($imagen) {
-                $binario = is_resource($imagen->imagen) ? stream_get_contents($imagen->imagen) : $imagen->imagen;
-                $imagenPerfil = 'data:image/jpeg;base64,' . $binario;
-            }
+        $usuario = Auth::user();
+        $permisos = [];
+        if ($usuario) {
+            $usuario->loadMissing('rol');
+            $permisos = $usuario->rol->nombre_rol === 'Administrador'
+                ? \App\Models\Permiso::pluck('tipo_permiso')->all()
+                : $usuario->rol->permisos()->pluck('tipo_permiso')->all();
         }
         return [
             ...parent::share($request),
             'name' => config('app.name'),
             'quote' => ['message' => trim($message), 'author' => trim($author)],
             'auth' => [
-                'user' => Auth::check() ? [
-                    'id' => Auth::user()->id_usuario,
-                    'nombre' => Auth::user()->usuario,
-                    'rol' => Auth::user()->load('rol')->rol->rol,
+                'user' => $usuario ? [
+                    'id' => $usuario->id_usuario,
+                    'nombre' => trim($usuario->nombre . ' ' . $usuario->apellido),
+                    'usuario' => $usuario->usuario,
+                    'rol' => $usuario->rol->nombre_rol,
+                    'permisos' => $permisos,
                 ] : null,
-                'imagenPerfil' => $imagenPerfil,
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
             'flash' => fn() => $request->session()->get('flash'),

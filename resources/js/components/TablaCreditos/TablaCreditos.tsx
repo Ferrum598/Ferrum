@@ -1,108 +1,28 @@
-import { router } from "@inertiajs/react";
-import DataTable from "react-data-table-component";
-import { useState } from "react";
+import { Link } from "@inertiajs/react";
+import type { Credito } from "../Interfaces/interfaceCreditos";
 
-export default function TablaCreditos({ usuarios, clientes}: { usuarios?: any, clientes?: any}) {
+const moneda = (valor: string | number) => `Q${Number(valor).toFixed(2)}`;
 
-    // Estado para la búsqueda
-        const [buscar, setBuscar] = useState('');
-
-    // Transformar usuarios
-    const dataUsuarios = (usuarios || []).map((credito: any) => {
-
-        return {
-            id: credito.id_usuario,
-            tipo: 'Usuario',
-            cliente: credito.usuario,
-            apellido: '--',
-            numero_telefono: 'N/A',
-            deuda: Number(credito.total.deuda_total).toLocaleString('en-US', {style: 'currency', currency: 'GTQ'}),
-            saldo: Number(credito.total.saldo_total).toLocaleString('en-US', {style: 'currency', currency: 'GTQ'}),
-            acciones: (
-                <button 
-                    onClick={() => router.get('/creditos/detalles', { usuarioId: credito.id_usuario })} 
-                    className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded cursor-pointer"
-                >
-                    Ver Detalles
-                </button>
-            )
-        };
-    });
-
-    // Transformar clientes (con créditos también)
-    const dataClientes = (clientes || []).map((cliente: any) => {
-    
-        return {
-            id: cliente.id_cliente,
-            tipo: 'Cliente',
-            cliente: cliente.nombre,
-            apellido: cliente.apellido,
-            numero_telefono: cliente.numero_telefono,
-            deuda: Number(cliente.total.deuda_total).toLocaleString('en-US', {style: 'currency', currency: 'GTQ'}),
-            saldo: Number(cliente.total.saldo_total).toLocaleString('en-US', {style: 'currency', currency: 'GTQ'}),
-            acciones: (
-                <button 
-                    onClick={() => router.get('/creditos/detalles', { clienteId: cliente.id_cliente })} 
-                    className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded cursor-pointer"
-                >
-                    Ver Detalles
-                </button>
-            )
-        };
-    });
-
-    // Combina ambos arrays
-    const data = [...dataUsuarios, ...dataClientes];
-
-    // Filtro para la búsqueda
-    const datosFiltrados = data.filter((item) =>
-        item.cliente?.toLowerCase().includes(buscar.toLowerCase()) ||
-        item.apellido?.toLowerCase().includes(buscar.toLowerCase()) ||
-        item.tipo?.toLowerCase().includes(buscar.toLowerCase()) ||
-        item.numero_telefono?.toLowerCase().includes(buscar.toLowerCase())
-    );
-
-    const columns = [
-        { name: "Tipo", selector: (row: any) => row.tipo, sortable: true },
-        { name: "Cliente", selector: (row: any) => row.cliente, sortable: true },
-        { name: "Apellido", selector: (row: any) => row.apellido, sortable: true },
-        { name: "Telefono", selector: (row: any) => row.numero_telefono, sortable: true },
-        { name: "Saldo", selector: (row: any) => row.saldo, sortable: true },
-        { name: "Deuda", selector: (row: any) => row.deuda, sortable: true },
-        { name: "Acciones", selector: (row: any) => row.acciones, sortable: false },
-    ];
-
+export default function TablaCreditos({ creditos }: { creditos: Credito[] }) {
     return (
-        <>
-            <div className="w-full p-2 md:p-4 mt-0">
-                <input
-                    type="text"
-                    placeholder="Buscar cliente..."
-                    value={buscar}
-                    onChange={(e) => setBuscar(e.target.value)}
-                    className="mb-3 w-full rounded border p-2"
-                />
-            </div>
-            <div className="w-full p-2 md:p-5">
-                {/* Solo móvil: scroll horizontal */}
-                <div className="w-full max-h-[75vh] overflow-auto">
-                    <DataTable
-                        columns={columns}
-                        data={datosFiltrados}
-                        pagination
-                        highlightOnHover
-                    />
-                </div>
-                {/* Escritorio: tabla normal */}
-                <div className="hidden md:block w-full">
-                    <DataTable
-                        columns={columns}
-                        data={datosFiltrados}
-                        pagination
-                        highlightOnHover
-                    />
-                </div>
-            </div>
-        </>
+        <div className="w-full overflow-auto rounded bg-white p-2 shadow md:p-5">
+            <table className="w-full min-w-[900px] border-collapse text-left">
+                <thead><tr className="border-b bg-gray-100">
+                    {["Cliente", "Venta / comprobante", "Monto", "Saldo", "Inicio", "Vencimiento", "Estado", ""].map(t => <th className="p-3" key={t}>{t}</th>)}
+                </tr></thead>
+                <tbody>{creditos.map(c => {
+                    const daysLeft = (new Date(`${c.fecha_vencimiento}T00:00:00`).getTime() - new Date(new Date().toDateString()).getTime()) / 86400000;
+                    const alert = c.estado === "vencido" || (c.estado === "pendiente" && daysLeft >= 0 && daysLeft <= 3);
+                    return <tr className={`border-b hover:bg-gray-50 ${alert ? "bg-red-50 text-red-800" : ""}`} key={c.id_credito}>
+                        <td className="p-3">{c.cliente?.nombre_cliente} {c.cliente?.apellido_cliente}</td>
+                        <td className="p-3">#{c.fk_venta}{c.venta?.comprobante && <> / <a className="text-blue-600 underline" href={`/comprobantes/${c.venta.comprobante.id_comprobante}`}>{c.venta.comprobante.numero_comprobante}</a></>}</td>
+                        <td className="p-3">{moneda(c.monto_total)}</td><td className="p-3">{moneda(c.saldo_pendiente)}</td>
+                        <td className="p-3">{c.fecha_inicio}</td><td className="p-3">{c.fecha_vencimiento}{alert && c.estado === "pendiente" && <span className="ml-1 font-bold">(próximo)</span>}</td>
+                        <td className="p-3 capitalize">{c.estado}</td><td className="p-3"><Link className="rounded bg-blue-500 px-3 py-2 font-bold text-white hover:bg-blue-700" href={`/creditos/${c.id_credito}`}>Ver</Link></td>
+                    </tr>;
+                })}</tbody>
+            </table>
+            {creditos.length === 0 && <p className="p-4 text-center text-gray-600">No hay créditos que coincidan con los filtros.</p>}
+        </div>
     );
 }

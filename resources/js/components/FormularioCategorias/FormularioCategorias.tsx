@@ -1,84 +1,54 @@
-import { useForm, usePage } from "@inertiajs/react";
-import { useEffect } from "react";
-import Swal from "sweetalert2";
-export default function FormularioCategorias() {
+import { useForm } from '@inertiajs/react';
+import { useEffect } from 'react';
+import { Categoria } from '../Interfaces/interfaceCategoria';
+import useFlashSwal from '../FlashSwal/useFlashSwal';
 
-    const { flash } = usePage<{ flash: {title: string; message: string; icon: 'success' | 'error'} }>().props;
+export default function FormularioCategorias({ editando, onCancelar }: { editando?: Categoria | null; onCancelar?: () => void }) {
+    useFlashSwal();
+
+    const { data, setData, post, processing, errors, reset, clearErrors } = useForm({ nombre_categoria: '' });
+
     useEffect(() => {
-        if (flash?.icon) {
-            Swal.fire({
-                icon: flash.icon,
-                title: flash.title,
-                text: flash.message,
-                showConfirmButton: false,
-                timer: 2000,
-            });
-        }
-    }, [flash]);
+        setData('nombre_categoria', editando?.nombre_categoria ?? '');
+        clearErrors();
+    }, [editando]);
 
-    const { data, setData, post, processing, errors, reset } = useForm<{
-        categoria: string;
-        descripcion: string;
-      }>( {
-        categoria: "",
-        descripcion: "",
-      });
-    
-      const handleSubmit = (e: React.FormEvent) => {
+    const limpiar = () => {
+        reset();
+        onCancelar?.();
+    };
+
+    const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        post("/categorias/crear", {
-          onSuccess: () => reset(),
+        post(editando ? `/categorias/${editando.id_categoria}/actualizar` : '/categorias/crear', {
+            onSuccess: limpiar,
         });
-      };
-    return (
-        <>
-            <form
-            onSubmit={handleSubmit}
-            className="w-full bg-white/80 backdrop-blur rounded-xl shadow-lg ring-1 ring-slate-200 p-6 md:p-8"
-            >
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="flex flex-col gap-1">
-                <label className="text-sm font-medium text-slate-700">Nombre de la categoría</label>
-                <input
-                    className="border border-slate-300 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    type="text"
-                    value={data.categoria}
-                    onChange={(e) => setData("categoria", e.target.value)}
-                    placeholder="Ej. Útiles Escolares"
-                />
-                {errors.categoria && <span className="text-sm text-red-600">{errors.categoria}</span>}
-                </div>
+    };
 
-                <div className="flex flex-col gap-1 md:col-span-2">
-                <label className="text-sm font-medium text-slate-700">Descripción</label>
-                <textarea
-                    className="border border-slate-300 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    rows={3}
-                    value={data.descripcion}
-                    onChange={(e) => setData("descripcion", e.target.value)}
-                    placeholder="Descripción breve de la categoría"
-                />
-                {errors.descripcion && <span className="text-sm text-red-600">{errors.descripcion}</span>}
+    return (
+        <form onSubmit={handleSubmit} className="w-full rounded-xl bg-white/80 p-6 shadow-lg ring-1 ring-slate-200 backdrop-blur md:p-8">
+            <div className="grid grid-cols-1 gap-6">
+                <div className="flex flex-col gap-1">
+                    <label className="text-sm font-medium text-slate-700">{editando ? 'Editar categoría' : 'Nombre de la categoría'}</label>
+                    <input
+                        className="rounded-lg border border-slate-300 p-2.5 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        type="text"
+                        value={data.nombre_categoria}
+                        onChange={(e) => setData('nombre_categoria', e.target.value)}
+                        placeholder="Ej. Herramientas"
+                    />
+                    {errors.nombre_categoria && <span className="text-sm text-red-600">{errors.nombre_categoria}</span>}
                 </div>
             </div>
 
             <div className="mt-6 flex flex-wrap gap-3">
-                <button
-                type="submit"
-                disabled={processing}
-                className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2.5 rounded-lg hover:bg-blue-700 disabled:opacity-50"
-                >
-                {processing ? "Guardando..." : "Guardar"}
+                <button type="submit" disabled={processing} className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-white hover:bg-blue-700 disabled:opacity-50">
+                    {processing ? 'Guardando...' : editando ? 'Actualizar' : 'Guardar'}
                 </button>
-                <button
-                type="button"
-                onClick={() => reset()}
-                className="inline-flex items-center gap-2 bg-slate-100 text-slate-700 px-4 py-2.5 rounded-lg hover:bg-slate-200"
-                >
-                Limpiar
+                <button type="button" onClick={limpiar} className="inline-flex items-center gap-2 rounded-lg bg-slate-100 px-4 py-2.5 text-slate-700 hover:bg-slate-200">
+                    {editando ? 'Cancelar' : 'Limpiar'}
                 </button>
             </div>
-            </form>
-        </>
+        </form>
     );
 }

@@ -1,231 +1,113 @@
 import { useForm } from '@inertiajs/react';
-import React, { useEffect, useState, useRef } from 'react';
-import { ImagenProducto, Producto, ProductoForm } from '../Interfaces/interfaceInventario';
+import React, { useEffect, useState } from 'react';
+import { ProductoEdicion } from '../Interfaces/interfaceInventario';
 import { Categoria } from '../Interfaces/interfaceCategoria';
 
-export default function FormularioProducto({ productos, imagenes, categorias }: { productos?: Producto[]; imagenes?: ImagenProducto[]; categorias?: Categoria[] }) {
-    const codigoBarraRef = useRef<HTMLInputElement>(null);
-    const [imagenPreview, setImagenPreview] = useState<string | null>(null);
-    const { data, setData, post, errors } = useForm<ProductoForm>({
-        id: productos ? productos[0].id_producto : 0,
-        producto: productos ? productos[0].producto : '',
-        producto_plural: productos ? productos[0].producto_plural : '',
-        descripcion: productos ? productos[0].descripcion : '',
-        codigo_barra: productos ? productos[0].codigo_barra : '',
-        precio: Number(productos ? productos[0].precio : 0).toFixed(2),
-        cantidad: Number(productos ? productos[0].cantidad : 0),
-        imagen: undefined,
-        categoria: productos ? Number(productos[0].fk_id_categoria) : undefined,
-    });
+interface ProductoForm {
+    nombre_producto: string;
+    descripcion: string;
+    fk_categoria: number | '';
+    imagen: File | null;
+    nombre_lote: string;
+    precio_compra: string;
+    precio_venta: string;
+    cantidad: string;
+    fecha_ingreso: string;
+}
 
-    useEffect(() => {
-        if (codigoBarraRef.current) {
-            codigoBarraRef.current.focus();
-        }
-    }, []);
+const inputClase = 'w-full rounded-[10px] border border-gray-300 p-2';
+const hoy = () => new Date().toISOString().slice(0, 10);
+
+export default function FormularioProducto({ producto, categorias }: { producto?: ProductoEdicion; categorias?: Categoria[] }) {
+    const [imagenPreview, setImagenPreview] = useState<string | null>(null);
+    const { data, setData, post, processing, errors } = useForm<ProductoForm>({
+        nombre_producto: producto?.nombre_producto ?? '',
+        descripcion: producto?.descripcion ?? '',
+        fk_categoria: producto?.fk_categoria ?? '',
+        imagen: null,
+        nombre_lote: '',
+        precio_compra: '',
+        precio_venta: '',
+        cantidad: '',
+        fecha_ingreso: hoy(),
+    });
 
     useEffect(() => {
         if (!data.imagen) {
             setImagenPreview(null);
             return;
         }
-        const img = data.imagen;
-        const preview =
-            img && typeof img !== 'string' ? URL.createObjectURL(img) : img;
-        setImagenPreview(preview);
+        const url = URL.createObjectURL(data.imagen);
+        setImagenPreview(url);
+        return () => URL.revokeObjectURL(url);
     }, [data.imagen]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!productos) {
-            post('/inventario/guardarProducto');
-        } else {
-            post('/inventario/actualizar');
-        }
+        post(producto ? `/inventario/${producto.id_producto}/actualizar` : '/inventario/guardar', { forceFormData: true });
     };
 
+    const error = (campo: keyof ProductoForm) => errors[campo] && <span className="text-red-500">{errors[campo]}</span>;
+
     return (
-        <>
-            <div className="flex h-full w-full flex-col items-center justify-center gap-5 px-2">
-                <div className="w-full max-w-xs sm:max-w-sm md:max-w-md rounded-[5px] border-2 border-gray-300 p-2">
-                    {imagenes && imagenes.length > 0 ? (
-                        imagenes.map((img, index) => (
-                            <img
-                                key={index}
-                                className="h-full w-full object-cover"
-                                src={
-                                    imagenPreview ||
-                                    (typeof img.imagen === 'string'
-                                        ? img.imagen
-                                        : '/assets/productos/no-hay-imagen.jpg')
-                                }
-                                alt={`producto-${index}`}
-                            />
-                        ))
-                    ) : (
-                        <img
-                            className="h-full w-full object-cover"
-                            src={
-                                imagenPreview ||
-                                '/assets/productos/no-hay-imagen.jpg'
-                            }
-                            alt="no-hay-imagen"
-                        />
+        <div className="flex h-full w-full flex-col items-center justify-center gap-5 px-2">
+            <div className="w-full max-w-xs rounded-[5px] border-2 border-gray-300 p-2 sm:max-w-sm md:max-w-md">
+                <img className="h-full w-full object-cover" src={imagenPreview || producto?.imagen || '/assets/productos/no-hay-imagen.jpg'} alt="producto" />
+            </div>
+
+            <form onSubmit={handleSubmit} className="flex w-full flex-col items-center justify-center gap-5">
+                <div className="flex w-full flex-col justify-center gap-5 md:flex-row">
+                    <div className="flex w-full flex-col gap-3 md:w-1/2">
+                        <label htmlFor="nombre_producto">Nombre del Producto</label>
+                        <input id="nombre_producto" className={inputClase} type="text" value={data.nombre_producto} onChange={(e) => setData('nombre_producto', e.target.value)} placeholder="Producto" />
+                        {error('nombre_producto')}
+                        <label htmlFor="descripcion">Descripción del Producto</label>
+                        <textarea id="descripcion" className={inputClase} value={data.descripcion} onChange={(e) => setData('descripcion', e.target.value)} placeholder="Descripción" rows={4} maxLength={255} />
+                        {error('descripcion')}
+                        <label htmlFor="fk_categoria">Categoría del Producto</label>
+                        <select id="fk_categoria" className={inputClase} value={data.fk_categoria} onChange={(e) => setData('fk_categoria', e.target.value === '' ? '' : Number(e.target.value))}>
+                            <option value="">Seleccione una categoría</option>
+                            {categorias?.map((c) => (
+                                <option key={c.id_categoria} value={c.id_categoria}>
+                                    {c.nombre_categoria}
+                                </option>
+                            ))}
+                        </select>
+                        {error('fk_categoria')}
+                        <label htmlFor="imagen">Imagen del Producto</label>
+                        <input id="imagen" className={inputClase} type="file" accept="image/*" onChange={(e) => setData('imagen', e.target.files?.[0] || null)} />
+                        {error('imagen')}
+                    </div>
+
+                    {!producto && (
+                        <div className="flex w-full flex-col gap-3 md:w-1/2">
+                            <h2 className="font-semibold">Primer lote</h2>
+                            <label htmlFor="nombre_lote">Nombre del Lote</label>
+                            <input id="nombre_lote" className={inputClase} type="text" value={data.nombre_lote} onChange={(e) => setData('nombre_lote', e.target.value)} placeholder="Ej. Lote enero" />
+                            {error('nombre_lote')}
+                            <label htmlFor="precio_compra">Precio de Compra</label>
+                            <input id="precio_compra" className={inputClase} type="number" min="0" step="0.01" value={data.precio_compra} onChange={(e) => setData('precio_compra', e.target.value)} placeholder="0.00" />
+                            {error('precio_compra')}
+                            <label htmlFor="precio_venta">Precio de Venta</label>
+                            <input id="precio_venta" className={inputClase} type="number" min="0" step="0.01" value={data.precio_venta} onChange={(e) => setData('precio_venta', e.target.value)} placeholder="0.00" />
+                            {error('precio_venta')}
+                            <label htmlFor="cantidad">Cantidad</label>
+                            <input id="cantidad" className={inputClase} type="number" min="0" step="1" value={data.cantidad} onChange={(e) => setData('cantidad', e.target.value)} placeholder="Cantidad" />
+                            {error('cantidad')}
+                            <label htmlFor="fecha_ingreso">Fecha de Ingreso</label>
+                            <input id="fecha_ingreso" className={inputClase} type="date" value={data.fecha_ingreso} onChange={(e) => setData('fecha_ingreso', e.target.value)} />
+                            {error('fecha_ingreso')}
+                        </div>
                     )}
                 </div>
-
-                <form
-                    onSubmit={handleSubmit}
-                    className="flex w-full flex-col items-center justify-center gap-5"
+                <button
+                    className="w-full cursor-pointer rounded-[8px] bg-[#0B0B0B] p-2 font-semibold text-white transition duration-300 ease-in-out hover:-translate-y-1 hover:bg-[#282727] disabled:opacity-50 md:w-1/3"
+                    type="submit"
+                    disabled={processing}
                 >
-                    <div className="flex flex-col md:flex-row w-full justify-center gap-5">
-                        <div className="flex flex-col gap-3 w-full md:w-1/2">
-                            <label htmlFor="producto">Nombre del Producto</label>
-                            <input
-                                className="w-full rounded-[10px] border border-gray-300 p-2"
-                                type="text"
-                                value={data.producto}
-                                onChange={(e) =>
-                                    setData('producto', e.target.value)
-                                }
-                                placeholder="Producto"
-                            />
-                            {errors.producto && (
-                                <span className="text-red-500">
-                                    {errors.producto}
-                                </span>
-                            )}
-                            <label htmlFor="producto_plural">Nombre del Producto Plural</label>
-                            <input
-                                className="w-full rounded-[10px] border border-gray-300 p-2"
-                                type="text"
-                                value={data.producto_plural}
-                                onChange={(e) =>
-                                    setData('producto_plural', e.target.value)
-                                }
-                                placeholder="Producto plural"
-                            />
-                            {errors.producto_plural && (
-                                <span className="text-red-500">
-                                    {errors.producto_plural}
-                                </span>
-                            )}
-                            <label htmlFor="precio">Precio del Producto</label>
-                            <input
-                                className="w-full rounded-[10px] border border-gray-300 p-2"
-                                type="number"
-                                value={data.precio}
-                                onChange={(e) =>
-                                    setData('precio', e.target.value)
-                                }
-                                placeholder="Precio"
-                            />
-                            {errors.precio && (
-                                <span className="text-red-500">
-                                    {errors.precio}
-                                </span>
-                            )}
-                            <label htmlFor="descripcion">Descripción del Producto</label>
-                            <textarea
-                                className="w-full rounded-[10px] border border-gray-300 p-2"
-                                value={data.descripcion}
-                                onChange={(e) =>
-                                    setData('descripcion', e.target.value)
-                                }
-                                placeholder="Descripción"
-                                rows={4}
-                                maxLength={255}
-                            />
-                            {errors.descripcion && (
-                                <span className="text-red-500">
-                                    {errors.descripcion}
-                                </span>
-                            )}
-                        </div>
-                        <div className="flex flex-col gap-3 w-full md:w-1/2">
-                            <label htmlFor="cantidad">Cantidad del Producto</label>
-                            <input
-                                className="w-full rounded-[10px] border border-gray-300 p-2"
-                                type="number"
-                                value={data.cantidad}
-                                onChange={(e) =>
-                                    setData('cantidad', e.target.value)
-                                }
-                                placeholder="Cantidad"
-                            />
-                            {errors.cantidad && (
-                                <span className="text-red-500">
-                                    {errors.cantidad}
-                                </span>
-                            )}
-                            <label htmlFor="imagen">Imagen del Producto</label>
-                            <input
-                                className="w-full rounded-[10px] border border-gray-300 p-2"
-                                type="file"
-                                onChange={(e) =>
-                                    setData(
-                                        'imagen',
-                                        e.target.files?.[0] || null,
-                                    )
-                                }
-                            />
-                            {errors.imagen && (
-                                <span className="text-red-500">
-                                    {errors.imagen}
-                                </span>
-                            )}
-                            <label htmlFor="categoria">Categoría del Producto</label>
-                            <select
-                                className="w-full rounded-[10px] border border-gray-300 p-2"
-                                value={data.categoria || ''}
-                                onChange={(e) =>
-                                    setData('categoria', e.target.value === '' ? undefined : Number(e.target.value))
-                                }
-                            >
-                                <option value="">Seleccione una categoría</option>
-                                {categorias?.map((categoria) => (
-                                    <option key={categoria.id_categoria} value={categoria.id_categoria}>
-                                        {categoria.categoria}
-                                    </option>
-                                ))}
-                            </select>
-                            {errors.categoria && (
-                                <span className="text-red-500">
-                                    {errors.categoria}
-                                </span>
-                            )}
-                            <label htmlFor="codigo_barra">Codigo de barras</label>
-                            <input
-                                ref={codigoBarraRef}
-                                className="w-full rounded-[10px] border border-gray-300 p-2"
-                                type="text"
-                                value={data.codigo_barra}
-                                onChange={(e) =>
-                                    setData('codigo_barra', e.target.value)
-                                }
-                                onFocus={e => e.target.select()}
-                                onKeyDown={(e) => {
-                                    if (e.key === 'Enter') {
-                                        e.preventDefault();
-                                    }
-                                }}
-                                placeholder="Codigo de barras"
-                            />
-                            {errors.codigo_barra && (
-                                <span className="text-red-500">
-                                    {errors.codigo_barra}
-                                </span>
-                            )}
-                        </div>
-                    </div>
-                    <button
-                        className="w-full md:w-1/3 rounded-[8px] text-white bg-[#0B0B0B] p-2 transition duration-300 ease-in-out hover:-translate-y-1 hover:bg-[#282727] cursor-pointer font-semibold"
-                        type="submit"
-                    >
-                        Agregar Producto
-                    </button>
-                </form>
-            </div>
-        </>
+                    {producto ? 'Guardar Cambios' : 'Agregar Producto'}
+                </button>
+            </form>
+        </div>
     );
 }

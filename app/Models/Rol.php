@@ -8,15 +8,16 @@ class Rol extends Model
 {
     protected $table = 'roles';
     protected $primaryKey = 'id_rol';
-    public $timestamps = true;
 
-    protected $fillable = [
-        'rol',
-    ];
+    protected $fillable = ['nombre_rol', 'descripcion_rol'];
 
-    // Relación con el modelo Usuario
     public function usuarios()
     {
-        return $this->hasMany(Usuario::class, 'fk_id_rol', 'id_rol');
+        return $this->hasMany(Usuario::class, 'fk_rol', 'id_rol');
+    }
+
+    public function permisos()
+    {
+        return $this->belongsToMany(Permiso::class, 'rol_permiso', 'fk_rol', 'fk_permiso', 'id_rol', 'id_permisos');
     }
 }

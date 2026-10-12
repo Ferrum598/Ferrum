@@ -32,7 +32,7 @@ class ValidarRol
 
 
         // Verificar si el usuario tiene uno de los roles permitidos
-        if (!in_array($usuario->rol->rol, $roles)) {
+        if (!in_array($usuario->rol->nombre_rol, $roles)) {
             return redirect()->back()->with('flash', [
                 'title' => 'Acceso Denegado',
                 'icon' => 'error',

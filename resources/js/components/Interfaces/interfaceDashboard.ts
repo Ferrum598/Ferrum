@@ -1,44 +1,15 @@
-export interface DashboardData extends Record<string, any> {
-    estadisticas?: {
-        total_pedidos: number;
-        total_usuarios: number;
-        total_productos: number;
-        ventas_hoy: number;
-        ventas_mes: number;
+export interface DashboardData extends Record<string, unknown> {
+    estadisticas: {
+        ventas_hoy_cantidad: number;
+        ventas_hoy_monto: number;
+        ventas_mes_cantidad: number;
+        ventas_mes_monto: number;
+        ingresos_cobrados_mes: number;
+        creditos_pendientes: number;
+        creditos_vencidos: number;
+        stock_bajo_unidades: number;
     };
-    productos_mas_vendidos?: Array<{
-        producto: string;
-        precio: number;
-        total_vendido: number;
-        ingresos_generados: number;
-    }>;
-    productos_menos_vendidos?: Array<{
-        producto: string;
-        precio: number;
-        stock_actual: number;
-        total_vendido: number;
-    }>;
-    ventas_por_mes?: Array<{
-        mes: string;
-        año: number;
-        total: number;
-        cantidad_pedidos: number;
-    }>;
-    productos_stock_bajo?: Array<{
-        producto: string;
-        cantidad: number;
-        precio: number;
-    }>;
-    pedidos_recientes?: Array<{
-        id: number;
-        usuario: string;
-        total: number;
-        estado: string;
-        fecha: string;
-        productos_count: number;
-    }>;
-    estados_pedidos?: Array<{
-        estado: string;
-        cantidad: number;
-    }>;
+    productos_mas_vendidos: Array<{ producto: string; total_vendido: number; ingresos_generados: number }>;
+    productos_stock_bajo: Array<{ id_producto: number; producto: string; cantidad_disponible: number }>;
+    ventas_por_dia: Array<{ fecha: string; etiqueta: string; cantidad: number; total: number }>;
 }

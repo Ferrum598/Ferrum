@@ -1,8 +1,7 @@
 export interface Cliente {
     id_cliente: number;
-    nombre: string;
-    apellido: string;
-    numero_telefono: number;
-    creditos: any[];
-    total: any;
+    nombre_cliente: string;
+    apellido_cliente: string;
+    numero_cliente: string | null;
+    deuda_total?: number;
 }

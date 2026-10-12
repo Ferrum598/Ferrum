@@ -8,27 +8,22 @@ class Cliente extends Model
 {
     protected $table = 'clientes';
     protected $primaryKey = 'id_cliente';
-    public $timestamps = true;
 
-    protected $fillable = [
-        'nombre',
-        'apellido',
-        'numero_telefono',
-        'fk_id_total',
-    ];
-    protected $hidden = [
-        'created_at',
-        'updated_at',
-    ];
+    protected $fillable = ['nombre_cliente', 'apellido_cliente', 'numero_cliente'];
 
-    // Relación con el modelo Credito
+    public function ventas()
+    {
+        return $this->hasMany(Venta::class, 'fk_cliente', 'id_cliente');
+    }
+
     public function creditos()
     {
-        return $this->hasMany(Credito::class, 'fk_id_cliente', 'id_cliente');
+        return $this->hasMany(Credito::class, 'fk_cliente', 'id_cliente');
     }
-    // Relación con el modelo Total
-    public function total()
+
+    // Deuda total = suma de los saldos pendientes de sus créditos
+    public function deudaTotal(): string
     {
-        return $this->belongsTo(Total::class, 'fk_id_total', 'id_total');
-    }   
+        return (string) $this->creditos()->where('estado', '!=', 'pagado')->sum('saldo_pendiente');
+    }
 }

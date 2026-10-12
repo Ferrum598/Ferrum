@@ -1,42 +1,22 @@
 import SistemaLayout from "@/layouts/SistemaLayout/SistemaLayout";
 import { useForm, usePage } from "@inertiajs/react";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import Swal from "sweetalert2";
 
-export default function Perfil({usuario, imagene}: {usuario: any, imagene: string | null}) {
-    const {data,errors,setData,post} = useForm<{
-        usuario: string, 
-        direccion: string, 
-        nit: string, 
-        nit2: string, 
-        telefono: string,
-        imagen?: File | string | null
-    }>({
+export default function Perfil({usuario}: {usuario: {nombre: string, apellido: string, usuario: string}}) {
+    const {data,errors,setData,post} = useForm({
+        nombre: usuario.nombre || '',
+        apellido: usuario.apellido || '',
         usuario: usuario.usuario || '',
-        direccion: usuario.direccion || '',
-        nit: usuario.nit || '',
-        nit2: usuario.nit2 || '',
-        telefono: usuario.telefono || '',
-        imagen: undefined,
+        password: '',
+        password_confirmation: '',
     });
 
     const { flash } = usePage<{ flash: { icon: 'success'| 'error'; message: string; title: string; } }>().props;
-    const [previewImagen, setPreviewImagen] = useState<string | undefined>(undefined);
-
-    useEffect(() => {
-         if (!data.imagen) {
-            setPreviewImagen(undefined);
-            return;
-        }
-        const img = data.imagen;
-        const preview =
-            img && typeof img !== 'string' ? URL.createObjectURL(img) : img;
-        setPreviewImagen(preview);
-    }, [data.imagen]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        post('/perfil/actualizar', { forceFormData: true });
+        post('/perfil/actualizar');
     };
 
     useEffect(() => {
@@ -51,7 +31,9 @@ export default function Perfil({usuario, imagene}: {usuario: any, imagene: strin
         }
     }, [flash]);
 
-    return( 
+    const clase = "w-[300px] rounded-[10px] border border-gray-300 p-2";
+
+    return(
         <>
         <SistemaLayout>
             <div className="w-[50%] m-auto pt-3 pb-5">
@@ -59,59 +41,35 @@ export default function Perfil({usuario, imagene}: {usuario: any, imagene: strin
                     <div className="flex gap-2 flex-col items-center">
                         <h1 className="text-2xl">Perfil de Usuario</h1>
                         <div className="mb-4 h-32 w-32 overflow-hidden rounded-full bg-gray-200 ">
-                            <img
-                                src={
-                                    previewImagen
-                                        ? previewImagen
-                                        : imagene
-                                        ? imagene
-                                        : '/images/Avatar.jpg'
-                                }
-                                alt="Imagen de perfil"
-                                className="object-cover w-32 h-32"
-                            />
+                            <img src="/images/Avatar.jpg" alt="Imagen de perfil" className="object-cover w-32 h-32" />
                         </div>
                         <form onSubmit={handleSubmit} className="mb-5">
                             <div className="flex flex-col gap-3">
-            
-                                <span className="font-bold">Imagen de perfil</span>
-                                    <input 
-                                    className="w-[300px] rounded-[10px] border border-gray-300 p-2" type="file"
-                                    onChange={(e) => {
-                                        setData('imagen', e.target.files?.[0] || null);
-                                    }}
-                                    />
+                                <span className="font-bold">Nombre</span>
+                                <input className={clase} value={data.nombre} onChange={(e) => setData('nombre', e.target.value)} />
+                                {errors.nombre && <span className="text-red-600 text-sm">{errors.nombre}</span>}
+
+                                <span className="font-bold">Apellido</span>
+                                <input className={clase} value={data.apellido} onChange={(e) => setData('apellido', e.target.value)} />
+                                {errors.apellido && <span className="text-red-600 text-sm">{errors.apellido}</span>}
 
                                 <span className="font-bold">Usuario</span>
-                                    <input className="w-[300px] rounded-[10px] border border-gray-300 p-2" 
-                                    value={data.usuario} 
-                                    onChange={(e) => {setData('usuario', e.target.value)}} />
+                                <input className={clase} value={data.usuario} onChange={(e) => setData('usuario', e.target.value)} />
+                                {errors.usuario && <span className="text-red-600 text-sm">{errors.usuario}</span>}
 
-                                <span className="font-bold">Dirección</span>
-                                    <textarea className="w-[300px] rounded-[10px] border border-gray-300 p-2" 
-                                    value={data.direccion} 
-                                    onChange={(e) => {setData('direccion', e.target.value)}} />
+                                <span className="font-bold">Nueva contraseña</span>
+                                <input type="password" className={clase} placeholder="Dejar vacío para no cambiarla" value={data.password} onChange={(e) => setData('password', e.target.value)} />
+                                {errors.password && <span className="text-red-600 text-sm">{errors.password}</span>}
 
-                                <span className="font-bold">NIT</span>
-                                    <input className="w-[300px] rounded-[10px] border border-gray-300 p-2" 
-                                    value={data.nit} 
-                                    onChange={(e) => {setData('nit', e.target.value)}} />  
+                                <span className="font-bold">Confirmar contraseña</span>
+                                <input type="password" className={clase} value={data.password_confirmation} onChange={(e) => setData('password_confirmation', e.target.value)} />
 
-                                <span className="font-bold">NIT2</span>
-                                    <input className="w-[300px] rounded-[10px] border border-gray-300 p-2" 
-                                    value={data.nit2} 
-                                    onChange={(e) => {setData('nit2', e.target.value)}} />
-
-                                <span className="font-bold">Teléfono</span>
-                                    <input className="w-[300px] rounded-[10px] border border-gray-300 p-2" 
-                                    value={data.telefono} 
-                                    onChange={(e) => {setData('telefono', e.target.value)}} />
                                 <button type="submit" className=" cursor-pointer mt-4 bg-blue-500 text-white rounded-[10px] p-2 transform duration-300 ease-in-out hover:bg-blue-600 hover:scale-105 hover:shadow-lg hover:-translate-y-1">Guardar</button>
-                            </div>     
+                            </div>
                         </form>
                     </div>
                 </div>
-            </div>    
+            </div>
         </SistemaLayout>
         </>
     );

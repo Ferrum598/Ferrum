@@ -2,183 +2,74 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Pedido;
-use App\Models\Producto;
-use App\Models\PedidoProducto;
-use App\Models\Usuario;
-use Illuminate\Http\Request;
+use App\Models\AbonoCredito;
+use App\Models\Credito;
+use App\Models\DetalleVenta;
+use App\Models\Lote;
+use App\Models\Venta;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
-use Carbon\Carbon;
-use Illuminate\Support\Facades\Log;
 
 class DashboardController extends Controller
 {
     public function index()
     {
-        try {
-            // Estadísticas generales con manejo de errores
-            $totalPedidos = Pedido::count() ?? 0;
-            $totalProductos = Producto::where('estatus', 'activo')->count() ?? 0;
-            $ventasHoy = Pedido::whereDate('fecha_pedido', today())
-                ->where('estado', '!=', 'cancelado')
-                ->sum('total_pedido') ?? 0;
-            $ventasMes = Pedido::whereMonth('fecha_pedido', now()->month)
-                ->where('estado', '!=', 'cancelado')
-                ->sum('total_pedido') ?? 0;
+        $inicioHoy = now()->startOfDay();
+        $finHoy = now()->endOfDay();
+        $inicioMes = now()->startOfMonth();
+        $finMes = now()->endOfMonth();
+        $ventasHoy = Venta::whereBetween('fecha_venta', [$inicioHoy, $finHoy]);
+        $ventasMes = Venta::whereBetween('fecha_venta', [$inicioMes, $finMes]);
+        $contadoMes = (clone $ventasMes)->whereDoesntHave('credito')->sum('total');
+        $abonosMes = AbonoCredito::whereBetween('fecha_abono', [$inicioMes->toDateString(), $finMes->toDateString()])->sum('monto');
 
-            //Productos más vendidos
-            $productosMasVendidos = DB::table('pedidos_productos')
-                ->join('productos', 'pedidos_productos.fk_id_producto', '=', 'productos.id_producto')
-                ->join('pedidos', 'pedidos_productos.fk_id_pedido', '=', 'pedidos.id_pedido')
-                ->where('pedidos.estado', '!=', 'cancelado')
-                ->select(
-                    'productos.producto',
-                    'productos.precio',
-                    DB::raw('SUM(pedidos_productos.cantidad) as total_vendido'),
-                    DB::raw('SUM(pedidos_productos.total) as ingresos_generados')
-                )
-                ->groupBy('productos.id_producto', 'productos.producto', 'productos.precio')
-                ->orderBy('total_vendido', 'desc')
-                ->limit(10)
-                ->get() ?? collect();
+        $ventasPorDia = collect(range(29, 0))->map(function ($dias) {
+            $fecha = now()->subDays($dias);
+            $ventas = Venta::whereBetween('fecha_venta', [$fecha->copy()->startOfDay(), $fecha->copy()->endOfDay()]);
+            return [
+                'fecha' => $fecha->format('Y-m-d'),
+                'etiqueta' => $fecha->format('d/m'),
+                'cantidad' => (clone $ventas)->count(),
+                'total' => (float) (clone $ventas)->sum('total'),
+            ];
+        })->values();
 
-            // Productos menos vendidos
-            $productosMenosVendidos = DB::table('productos')
-                ->leftJoin('pedidos_productos', 'productos.id_producto', '=', 'pedidos_productos.fk_id_producto')
-                ->leftJoin('pedidos', function ($join) {
-                    $join->on('pedidos_productos.fk_id_pedido', '=', 'pedidos.id_pedido')
-                        ->where('pedidos.estado', '!=', 'cancelado');
-                })
-                ->where('productos.estatus', 'activo')
-                ->select(
-                    'productos.producto',
-                    'productos.precio',
-                    'productos.cantidad as stock_actual',
-                    DB::raw('COALESCE(SUM(pedidos_productos.cantidad), 0) as total_vendido')
-                )
-                ->groupBy('productos.id_producto', 'productos.producto', 'productos.precio', 'productos.cantidad')
-                ->orderBy('total_vendido', 'asc')
-                ->limit(10)
-                ->get() ?? collect();
+        $productosMasVendidos = DetalleVenta::query()
+            ->join('ventas', 'detalle_venta.fk_venta', '=', 'ventas.id_venta')
+            ->join('lotes', 'detalle_venta.fk_lote', '=', 'lotes.id_lote')
+            ->join('productos', 'lotes.fk_producto', '=', 'productos.id_producto')
+            ->whereBetween('ventas.fecha_venta', [$inicioMes, $finMes])
+            ->select('productos.nombre_producto as producto', DB::raw('SUM(detalle_venta.cantidad) as total_vendido'), DB::raw('SUM(detalle_venta.subtotal) as ingresos_generados'))
+            ->groupBy('productos.id_producto', 'productos.nombre_producto')
+            ->orderByDesc('total_vendido')->limit(5)->get();
 
-            //Ventas por mes (últimos 6 meses)
-            $ventasPorMes = collect();
-            try {
-                $ventasPorMes = DB::table('pedidos')
-                    ->select(
-                        DB::raw('EXTRACT(MONTH FROM fecha_pedido) as mes'),
-                        DB::raw('EXTRACT(YEAR FROM fecha_pedido) as año'),
-                        DB::raw('SUM(total_pedido) as total'),
-                        DB::raw('COUNT(*) as cantidad_pedidos')
-                    )
-                    ->where('estado', '!=', 'cancelado')
-                    ->where('fecha_pedido', '>=', now()->subMonths(6))
-                    ->groupBy('año', 'mes')
-                    ->orderBy('año', 'desc')
-                    ->orderBy('mes', 'desc')
-                    ->get()
-                    ->map(function ($item) {
-                        $meses = [
-                            1 => 'Enero',
-                            2 => 'Febrero',
-                            3 => 'Marzo',
-                            4 => 'Abril',
-                            5 => 'Mayo',
-                            6 => 'Junio',
-                            7 => 'Julio',
-                            8 => 'Agosto',
-                            9 => 'Septiembre',
-                            10 => 'Octubre',
-                            11 => 'Noviembre',
-                            12 => 'Diciembre'
-                        ];
-                        return [
-                            'mes' => $meses[$item->mes] ?? 'N/A',
-                            'año' => $item->año,
-                            'total' => floatval($item->total),
-                            'cantidad_pedidos' => intval($item->cantidad_pedidos)
-                        ];
+        $stockBajo = Lote::query()
+            ->join('productos', 'lotes.fk_producto', '=', 'productos.id_producto')
+            ->where('lotes.activo', true)->where('productos.activo', true)
+            ->select('productos.id_producto', 'productos.nombre_producto as producto', DB::raw('SUM(lotes.cantidad_disponible) as cantidad_disponible'))
+            ->groupBy('productos.id_producto', 'productos.nombre_producto')
+            ->havingRaw('SUM(lotes.cantidad_disponible) <= 5')
+            ->orderBy('cantidad_disponible')->get();
+
+        return Inertia::render('Dashboard/Dashboard', [
+            'estadisticas' => [
+                'ventas_hoy_cantidad' => (clone $ventasHoy)->count(),
+                'ventas_hoy_monto' => (float) (clone $ventasHoy)->sum('total'),
+                'ventas_mes_cantidad' => (clone $ventasMes)->count(),
+                'ventas_mes_monto' => (float) (clone $ventasMes)->sum('total'),
+                'ingresos_cobrados_mes' => (float) $contadoMes + (float) $abonosMes,
+                'creditos_pendientes' => (float) Credito::where('estado', 'pendiente')->whereDate('fecha_vencimiento', '>=', today())->sum('saldo_pendiente'),
+                'creditos_vencidos' => (float) Credito::where(function ($query) {
+                    $query->where('estado', 'vencido')->orWhere(function ($pendiente) {
+                        $pendiente->where('estado', 'pendiente')->whereDate('fecha_vencimiento', '<', today());
                     });
-            } catch (\Exception $e) {
-                // Si falla, continuar con colección vacía
-            }
-
-            //Productos con stock bajo
-            $productosStockBajo = Producto::where('estatus', 'activo')
-                ->where('cantidad', '<', 10)
-                ->orderBy('cantidad', 'asc')
-                ->select('producto', 'cantidad', 'precio')
-                ->limit(10)
-                ->get() ?? collect();
-
-            // Pedidos recientes
-            $pedidosRecientes = collect();
-            try {
-                $pedidosRecientes = Pedido::with(['usuario', 'pedidoProductos'])
-                    ->orderBy('fecha_pedido', 'desc')
-                    ->limit(5)
-                    ->get()
-                    ->map(function ($pedido) {
-                        // ✅ CORRECCIÓN: Manejar fecha correctamente
-                        $fecha = $pedido->fecha_pedido;
-                        if (is_string($fecha)) {
-                            $fecha = Carbon::parse($fecha);
-                        }
-
-                        return [
-                            'id' => $pedido->id_pedido,
-                            'usuario' => $pedido->usuario->usuario ?? 'Usuario desconocido',
-                            'total' => floatval($pedido->total_pedido),
-                            'estado' => $pedido->estado,
-                            'fecha' => $fecha->format('d/m/Y H:i'), // ✅ Ahora funciona
-                            'productos_count' => $pedido->pedidoProductos->count()
-                        ];
-                    });
-            } catch (\Exception $e) {
-                // Si falla, continuar con colección vacía
-                Log::error('Error en pedidos recientes: ' . $e->getMessage());
-            }
-
-            //Estados de pedidos
-            $estadosPedidos = DB::table('pedidos')
-                ->select('estado', DB::raw('COUNT(*) as cantidad'))
-                ->groupBy('estado')
-                ->get() ?? collect();
-
-            return Inertia::render('Dashboard/Dashboard', [
-                'estadisticas' => [
-                    'total_pedidos' => $totalPedidos,
-                    'total_productos' => $totalProductos,
-                    'ventas_hoy' => floatval($ventasHoy),
-                    'ventas_mes' => floatval($ventasMes),
-                ],
-                'productos_mas_vendidos' => $productosMasVendidos->toArray(),
-                'productos_menos_vendidos' => $productosMenosVendidos->toArray(),
-                'ventas_por_mes' => $ventasPorMes->toArray(),
-                'productos_stock_bajo' => $productosStockBajo->toArray(),
-                'pedidos_recientes' => $pedidosRecientes->toArray(),
-                'estados_pedidos' => $estadosPedidos->toArray(),
-            ]);
-        } catch (\Exception $e) {
-            //Si todo falla, mostrar dashboard con datos vacíos
-            Log::error('Error en Dashboard: ' . $e->getMessage());
-
-            return Inertia::render('Dashboard/Dashboard', [
-                'estadisticas' => [
-                    'total_pedidos' => 0,
-                    'total_productos' => 0,
-                    'ventas_hoy' => 0,
-                    'ventas_mes' => 0,
-                ],
-                'productos_mas_vendidos' => [],
-                'productos_menos_vendidos' => [],
-                'ventas_por_mes' => [],
-                'productos_stock_bajo' => [],
-                'pedidos_recientes' => [],
-                'estados_pedidos' => [],
-                'error' => 'Error al cargar datos del dashboard: ' . $e->getMessage()
-            ]);
-        }
+                })->sum('saldo_pendiente'),
+                'stock_bajo_unidades' => (int) $stockBajo->sum('cantidad_disponible'),
+            ],
+            'productos_mas_vendidos' => $productosMasVendidos,
+            'productos_stock_bajo' => $stockBajo->take(10)->values(),
+            'ventas_por_dia' => $ventasPorDia,
+        ]);
     }
 }

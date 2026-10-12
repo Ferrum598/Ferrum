@@ -2,63 +2,50 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 
 class Usuario extends Authenticatable
 {
     protected $table = 'usuarios';
     protected $primaryKey = 'id_usuario';
-    public $timestamps = true;
 
     protected $fillable = [
+        'nombre',
+        'apellido',
         'usuario',
         'password',
-        'nit',
-        'nit2',
-        'telefono',
-        'direccion',
-        'fk_id_imagen',
-        'fk_id_rol',
-        'fk_id_total',
+        'fk_rol',
     ];
+
     protected $hidden = [
         'password',
-        'created_at',
-        'updated_at',
     ];
 
-    // Relación con el modelo Rol
+    protected function casts(): array
+    {
+        return ['password' => 'hashed'];
+    }
+
     public function rol()
     {
-        return $this->belongsTo(Rol::class, 'fk_id_rol', 'id_rol');
-    }
-    // Relación con el modelo Credito
-    public function creditos()
-    {
-        return $this->hasMany(Credito::class, 'fk_id_usuario', 'id_usuario');
+        return $this->belongsTo(Rol::class, 'fk_rol', 'id_rol');
     }
 
-    // Relación con el modelo Pedido
-    public function pedidos()
+    public function ventas()
     {
-        return $this->hasMany(Pedido::class, 'fk_id_usuario', 'id_usuario');
+        return $this->hasMany(Venta::class, 'fk_usuario', 'id_usuario');
     }
 
-    // Relación con el modelo Proforma
-    public function proformas()
+    // Verdadero si el rol del usuario tiene el permiso indicado (el Administrador siempre tiene acceso)
+    public function tienePermiso(string $permiso): bool
     {
-        return $this->hasMany(Proforma::class, 'fk_id_usuario', 'id_usuario');
+        $rol = $this->rol;
+        if (!$rol) {
+            return false;
+        }
+        if ($rol->nombre_rol === 'Administrador') {
+            return true;
+        }
+        return $rol->permisos()->where('tipo_permiso', $permiso)->exists();
     }
-
-    //Relacion con el modelo Imagen
-    public function imagenes()
-    {
-        return $this->belongsTo(Imagen::class, 'fk_id_imagen', 'id_imagen');
-    }
-    // Relación con el modelo Total
-    public function total()
-    {
-        return $this->belongsTo(Total::class, 'fk_id_total', 'id_total');
-    }   
 }
