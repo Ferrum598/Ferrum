@@ -151,6 +151,9 @@ function DetalleLotes({ data }: { data: ProductoInventario }) {
 export default function Tabla({ productos, buscarInicial = '' }: TablaProps) {
     const [buscar, setBuscar] = useState(buscarInicial);
     const [abiertos, setAbiertos] = useState<number[]>([]);
+    // La selección se conserva al cambiar de página o de búsqueda
+    const [seleccion, setSeleccion] = useState<number[]>([]);
+    const [cargandoTodos, setCargandoTodos] = useState(false);
     const perPage = productos?.per_page || 10;
 
     // Debounce para no recargar en cada letra
@@ -185,7 +188,30 @@ export default function Tabla({ productos, buscarInicial = '' }: TablaProps) {
         router.visit(`/inventario?buscar=${encodeURIComponent(buscar)}&page=${page}&per_page=${perPage}`, { preserveState: true, replace: true });
     };
 
+    const alternarSeleccion = (id: number) => setSeleccion((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
+
+    const seleccionarTodos = async () => {
+        setCargandoTodos(true);
+        try {
+            const res = await fetch(`/inventario/ids?buscar=${encodeURIComponent(buscar)}`, { headers: { Accept: 'application/json' }, credentials: 'same-origin' });
+            if (res.ok) {
+                const ids: number[] = await res.json();
+                setSeleccion((s) => Array.from(new Set([...s, ...ids])));
+            }
+        } finally {
+            setCargandoTodos(false);
+        }
+    };
+
+    const imprimirSeleccion = () => {
+        sessionStorage.setItem('inventario_imprimir', JSON.stringify(seleccion));
+        router.visit('/inventario/imprimir');
+    };
+
     const lista = productos?.data || [];
+    const paginaCompletaSeleccionada = lista.length > 0 && lista.every((p) => seleccion.includes(p.id_producto));
+    const alternarPagina = () =>
+        setSeleccion((s) => (paginaCompletaSeleccionada ? s.filter((id) => !lista.some((p) => p.id_producto === id)) : Array.from(new Set([...s, ...lista.map((p) => p.id_producto)]))));
     const bajoStock = lista.filter((p) => p.existencias < 10).length;
 
     return (
@@ -215,6 +241,19 @@ export default function Tabla({ productos, buscarInicial = '' }: TablaProps) {
                 />
             </div>
 
+            <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-slate-100 bg-white p-3 shadow-md">
+                <button onClick={seleccionarTodos} disabled={cargandoTodos} className="cursor-pointer rounded-xl bg-blue-50 px-4 py-2 text-sm font-bold text-blue-700 transition hover:bg-blue-100 disabled:opacity-50">
+                    {cargandoTodos ? 'Cargando…' : buscar ? '☑️ Seleccionar todos los resultados' : '☑️ Seleccionar todos'}
+                </button>
+                <button onClick={() => setSeleccion([])} disabled={!seleccion.length} className="cursor-pointer rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-600 transition hover:bg-slate-50 disabled:opacity-50">
+                    Quitar selección
+                </button>
+                <span className="text-sm text-slate-500">{seleccion.length} seleccionados</span>
+                <button onClick={imprimirSeleccion} disabled={!seleccion.length} className="ml-auto cursor-pointer rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-5 py-2 text-sm font-semibold text-white shadow-lg transition hover:from-blue-700 hover:to-indigo-700 active:scale-95 disabled:opacity-50">
+                    🖨️ Imprimir inventario
+                </button>
+            </div>
+
             <div className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-md">
                 {lista.length === 0 ? (
                     <div className="p-12 text-center text-slate-500">
@@ -226,6 +265,9 @@ export default function Tabla({ productos, buscarInicial = '' }: TablaProps) {
                         <table className="min-w-[800px] w-full text-sm">
                             <thead className="bg-gradient-to-r from-slate-900 to-blue-800 text-left text-xs uppercase tracking-wide text-white">
                                 <tr>
+                                    <th className="w-10 px-4 py-3">
+                                        <input type="checkbox" checked={paginaCompletaSeleccionada} onChange={alternarPagina} className="h-4 w-4 cursor-pointer" aria-label="Seleccionar página" />
+                                    </th>
                                     <th className="w-10 px-4 py-3"></th>
                                     <th className="px-4 py-3">Producto</th>
                                     <th className="px-4 py-3">Categoría</th>
@@ -241,6 +283,9 @@ export default function Tabla({ productos, buscarInicial = '' }: TablaProps) {
                                     return (
                                         <Fragment key={p.id_producto}>
                                             <tr className="transition hover:bg-blue-50/60">
+                                                <td className="px-4 py-3">
+                                                    <input type="checkbox" checked={seleccion.includes(p.id_producto)} onChange={() => alternarSeleccion(p.id_producto)} className="h-4 w-4 cursor-pointer" aria-label="Seleccionar producto" />
+                                                </td>
                                                 <td className="px-4 py-3">
                                                     <button className="cursor-pointer text-slate-500 transition hover:text-blue-600" onClick={() => alternar(p.id_producto)} aria-label="Ver lotes">
                                                         <span className={`inline-block transition-transform ${abierto ? 'rotate-90' : ''}`}>▶</span>
@@ -280,7 +325,7 @@ export default function Tabla({ productos, buscarInicial = '' }: TablaProps) {
                                             </tr>
                                             {abierto && (
                                                 <tr className="bg-slate-50">
-                                                    <td colSpan={7} className="px-4 py-4">
+                                                    <td colSpan={8} className="px-4 py-4">
                                                         <DetalleLotes data={p} />
                                                     </td>
                                                 </tr>

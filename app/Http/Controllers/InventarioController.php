@@ -104,6 +104,50 @@ class InventarioController extends Controller
         ]);
     }
 
+    // IDs de todos los productos activos que coinciden con la búsqueda (para "seleccionar todos")
+    public function idsProductos(Request $request)
+    {
+        $buscar = trim((string) $request->query('buscar', ''));
+        $query = Producto::where('activo', true);
+
+        if ($buscar !== '') {
+            $like = '%' . mb_strtolower($buscar) . '%';
+            $query->where(function ($q) use ($like) {
+                $q->whereRaw('LOWER(nombre_producto) LIKE ?', [$like])
+                    ->orWhereHas('lotes.codigos', fn ($c) => $c->whereRaw('LOWER(codigo) LIKE ?', [$like]));
+            });
+        }
+
+        return response()->json($query->pluck('id_producto'));
+    }
+
+    public function imprimir()
+    {
+        return Inertia::render('Inventario/ImprimirInventario');
+    }
+
+    // Datos de los productos elegidos para el reporte impreso
+    public function datosImpresion(Request $request)
+    {
+        $datos = $request->validate(['ids' => 'required|array|min:1', 'ids.*' => 'integer']);
+
+        $productos = Producto::with(['categoria', 'lotes' => fn ($q) => $q->where('activo', true)])
+            ->where('activo', true)
+            ->whereIn('id_producto', $datos['ids'])
+            ->orderBy('nombre_producto')
+            ->get()
+            ->map(fn (Producto $p) => [
+                'id_producto' => $p->id_producto,
+                'nombre_producto' => $p->nombre_producto,
+                'categoria' => $p->categoria?->nombre_categoria,
+                'existencias' => (int) $p->lotes->sum('cantidad_disponible'),
+                'precio_min' => $p->lotes->isNotEmpty() ? (float) $p->lotes->min('precio_venta') : null,
+                'precio_max' => $p->lotes->isNotEmpty() ? (float) $p->lotes->max('precio_venta') : null,
+            ]);
+
+        return response()->json($productos);
+    }
+
     public function crear()
     {
         return Inertia::render('AgregarProducto/AgregarProducto', [

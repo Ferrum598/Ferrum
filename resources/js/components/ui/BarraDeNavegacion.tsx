@@ -9,6 +9,7 @@ const opcionesMenu = [
     { href: '/dashboard', permiso: 'dashboard', texto: 'Dashboard', icono: '/assets/icon/dashboard.png' },
     { href: '/ventas', permiso: 'ventas', texto: 'Ventas', icono: '/assets/icon/catalogo.png' },
     { href: '/comprobantes', permiso: 'comprobantes', texto: 'Comprobantes', icono: '/assets/icon/facturacion.png' },
+    { href: '/cotizaciones', permiso: 'ventas', texto: 'Cotizaciones', icono: '/assets/icon/pedido.png' },
     { href: '/inventario', permiso: 'inventario', texto: 'Inventario', icono: '/assets/icon/inventario.png' },
     { href: '/codigos-barras', permiso: 'codigos_barras', texto: 'Códigos de barras', icono: '/assets/icon/pedido.png' },
     { href: '/clientes', permiso: 'clientes', texto: 'Clientes', icono: '/assets/icon/carrito.png' },

@@ -9,6 +9,9 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware('permiso:inventario')->prefix('inventario')->group(function () {
     Route::get('/', [InventarioController::class, 'index'])->name('inventario.index');
+    Route::get('/ids', [InventarioController::class, 'idsProductos'])->name('inventario.ids');
+    Route::get('/imprimir', [InventarioController::class, 'imprimir'])->name('inventario.imprimir');
+    Route::post('/imprimir/datos', [InventarioController::class, 'datosImpresion'])->name('inventario.imprimir.datos');
     Route::get('/agregar', [InventarioController::class, 'crear'])->name('inventario.crear');
     Route::post('/guardar', [InventarioController::class, 'guardar'])->name('inventario.guardar');
     Route::get('/{producto}/editar', [InventarioController::class, 'editar'])->whereNumber('producto')->name('inventario.editar');
