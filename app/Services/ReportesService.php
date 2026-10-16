@@ -16,7 +16,7 @@ class ReportesService
     public function generarReporteVentas(string $tipo, Carbon $referencia, int $usuarioId): ReporteVenta
     {
         [$inicio, $fin] = $this->rango($tipo, $referencia);
-        $ventas = Venta::query()->whereBetween('fecha_venta', [$inicio->copy()->startOfDay(), $fin->copy()->endOfDay()]);
+        $ventas = Venta::query()->activas()->whereBetween('fecha_venta', [$inicio->copy()->startOfDay(), $fin->copy()->endOfDay()]);
         $totalContado = (clone $ventas)->whereDoesntHave('credito')->sum('total');
         $totalCredito = (clone $ventas)->whereHas('credito')->sum('total');
         $totalAbonos = AbonoCredito::query()->whereBetween('fecha_abono', [$inicio->toDateString(), $fin->toDateString()])->sum('monto');
@@ -41,7 +41,7 @@ class ReportesService
         $fin = $inicio->copy()->endOfMonth()->endOfDay();
 
         return DB::transaction(function () use ($mes, $anio, $usuarioId, $inicio, $fin) {
-            $ventasContado = Venta::query()->whereBetween('fecha_venta', [$inicio, $fin])->whereDoesntHave('credito')->with('detalles')->get();
+            $ventasContado = Venta::query()->activas()->whereBetween('fecha_venta', [$inicio, $fin])->whereDoesntHave('credito')->with('detalles')->get();
             $ingresoContado = (float) $ventasContado->sum('total');
             $costoContado = (float) $ventasContado->sum(fn (Venta $venta) => $venta->detalles->sum(fn ($detalle) => (float) $detalle->cantidad * (float) $detalle->costo_unitario));
             $abonos = AbonoCredito::query()->whereBetween('fecha_abono', [$inicio->toDateString(), $fin->toDateString()])->with('credito.venta.detalles')->get();

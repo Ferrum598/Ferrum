@@ -19,14 +19,14 @@ class DashboardController extends Controller
         $finHoy = now()->endOfDay();
         $inicioMes = now()->startOfMonth();
         $finMes = now()->endOfMonth();
-        $ventasHoy = Venta::whereBetween('fecha_venta', [$inicioHoy, $finHoy]);
-        $ventasMes = Venta::whereBetween('fecha_venta', [$inicioMes, $finMes]);
+        $ventasHoy = Venta::activas()->whereBetween('fecha_venta', [$inicioHoy, $finHoy]);
+        $ventasMes = Venta::activas()->whereBetween('fecha_venta', [$inicioMes, $finMes]);
         $contadoMes = (clone $ventasMes)->whereDoesntHave('credito')->sum('total');
         $abonosMes = AbonoCredito::whereBetween('fecha_abono', [$inicioMes->toDateString(), $finMes->toDateString()])->sum('monto');
 
         $ventasPorDia = collect(range(29, 0))->map(function ($dias) {
             $fecha = now()->subDays($dias);
-            $ventas = Venta::whereBetween('fecha_venta', [$fecha->copy()->startOfDay(), $fecha->copy()->endOfDay()]);
+            $ventas = Venta::activas()->whereBetween('fecha_venta', [$fecha->copy()->startOfDay(), $fecha->copy()->endOfDay()]);
             return [
                 'fecha' => $fecha->format('Y-m-d'),
                 'etiqueta' => $fecha->format('d/m'),
@@ -39,6 +39,7 @@ class DashboardController extends Controller
             ->join('ventas', 'detalle_venta.fk_venta', '=', 'ventas.id_venta')
             ->join('lotes', 'detalle_venta.fk_lote', '=', 'lotes.id_lote')
             ->join('productos', 'lotes.fk_producto', '=', 'productos.id_producto')
+            ->where('ventas.anulado', false)
             ->whereBetween('ventas.fecha_venta', [$inicioMes, $finMes])
             ->select('productos.nombre_producto as producto', DB::raw('SUM(detalle_venta.cantidad) as total_vendido'), DB::raw('SUM(detalle_venta.subtotal) as ingresos_generados'))
             ->groupBy('productos.id_producto', 'productos.nombre_producto')

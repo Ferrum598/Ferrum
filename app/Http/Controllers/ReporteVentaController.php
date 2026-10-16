@@ -35,7 +35,7 @@ class ReporteVentaController extends Controller
 
     public function mostrar(ReporteVenta $reporte)
     {
-        $ventas = \App\Models\Venta::with(['cliente', 'detalles.lote.producto', 'credito'])
+        $ventas = \App\Models\Venta::activas()->with(['cliente', 'detalles.lote.producto', 'credito'])
             ->whereBetween('fecha_venta', [$reporte->fecha_inicio->toDateString().' 00:00:00', $reporte->fecha_fin->toDateString().' 23:59:59'])
             ->orderBy('fecha_venta')->get();
         return Inertia::render('ReportesVentas/ReportesVentas', ['reporteActual' => $reporte, 'ventasDetalle' => $ventas]);

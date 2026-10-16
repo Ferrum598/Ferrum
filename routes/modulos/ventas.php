@@ -19,6 +19,7 @@ Route::middleware('permiso:ventas')->prefix('ventas')->name('ventas.')->group(fu
 Route::middleware('permiso:comprobantes')->prefix('comprobantes')->name('comprobantes.')->group(function () {
     Route::get('/', [ComprobanteController::class, 'index'])->name('index');
     Route::get('/{id}', [ComprobanteController::class, 'show'])->whereNumber('id')->name('show');
+    Route::post('/{id}/anular', [ComprobanteController::class, 'anular'])->whereNumber('id')->name('anular');
     Route::post('/{id}/impreso', [ComprobanteController::class, 'impreso'])->whereNumber('id')->name('impreso');
 });
 

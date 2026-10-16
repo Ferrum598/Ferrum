@@ -47,6 +47,7 @@ export interface VentaHistorial {
     tipo_pago: 'contado' | 'credito';
     id_comprobante: number | null;
     numero_comprobante: string | null;
+    anulado: boolean;
 }
 
 export interface ComprobanteLista {
@@ -57,6 +58,7 @@ export interface ComprobanteLista {
     cliente: string | null;
     tipo_pago: 'contado' | 'credito';
     veces_impreso: number;
+    anulado: boolean;
 }
 
 export interface ComprobanteDetalle {
@@ -65,6 +67,8 @@ export interface ComprobanteDetalle {
     fecha_emision: string;
     total: string;
     veces_impreso: number;
+    anulado: boolean;
+    fecha_anulacion: string | null;
     vendedor: string | null;
     cliente: { nombre: string; numero: string | null } | null;
     tipo_pago: 'contado' | 'credito';
