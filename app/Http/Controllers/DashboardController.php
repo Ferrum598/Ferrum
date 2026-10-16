@@ -24,6 +24,13 @@ class DashboardController extends Controller
         $contadoMes = (clone $ventasMes)->whereDoesntHave('credito')->sum('total');
         $abonosMes = AbonoCredito::whereBetween('fecha_abono', [$inicioMes->toDateString(), $finMes->toDateString()])->sum('monto');
 
+        $costoMes = (float) DB::table('detalle_venta')
+            ->join('ventas', 'detalle_venta.fk_venta', '=', 'ventas.id_venta')
+            ->where('ventas.anulado', false)
+            ->whereBetween('ventas.fecha_venta', [$inicioMes, $finMes])
+            ->sum(DB::raw('detalle_venta.cantidad * detalle_venta.costo_unitario'));
+        $montoMes = (float) (clone $ventasMes)->sum('total');
+
         $ventasPorDia = collect(range(29, 0))->map(function ($dias) {
             $fecha = now()->subDays($dias);
             $ventas = Venta::activas()->whereBetween('fecha_venta', [$fecha->copy()->startOfDay(), $fecha->copy()->endOfDay()]);
@@ -59,6 +66,8 @@ class DashboardController extends Controller
                 'ventas_hoy_monto' => (float) (clone $ventasHoy)->sum('total'),
                 'ventas_mes_cantidad' => (clone $ventasMes)->count(),
                 'ventas_mes_monto' => (float) (clone $ventasMes)->sum('total'),
+                'costo_ventas_mes' => round($costoMes, 2),
+                'diferencia_mes' => round($montoMes - $costoMes, 2),
                 'ingresos_cobrados_mes' => (float) $contadoMes + (float) $abonosMes,
                 'creditos_pendientes' => (float) Credito::where('estado', 'pendiente')->whereDate('fecha_vencimiento', '>=', today())->sum('saldo_pendiente'),
                 'creditos_vencidos' => (float) Credito::where(function ($query) {
