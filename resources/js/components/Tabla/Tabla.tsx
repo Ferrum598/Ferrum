@@ -14,16 +14,43 @@ const badgeExistencias = (n: number) =>
     n === 0 ? 'bg-red-100 text-red-700 ring-red-200' : n < 10 ? 'bg-amber-100 text-amber-700 ring-amber-200' : 'bg-emerald-100 text-emerald-700 ring-emerald-200';
 
 function DetalleLotes({ data }: { data: ProductoInventario }) {
+    const [loteSeleccionadoId, setLoteSeleccionadoId] = useState<number | null>(null);
+    const [cantidadAgregar, setCantidadAgregar] = useState('');
+
+    const loteSeleccionado = data.lotes.find((l: LoteInventario) => l.id_lote === loteSeleccionadoId) ?? null;
+
+    const agregarStock = () => {
+        if (!loteSeleccionado) return;
+
+        const cantidad = Number(cantidadAgregar);
+        if (!Number.isInteger(cantidad) || cantidad <= 0) {
+            Swal.fire({
+                title: 'Cantidad inválida',
+                text: 'Debes ingresar un número entero mayor a 0.',
+                icon: 'warning',
+                confirmButtonColor: '#3085d6',
+            });
+            return;
+        }
+
+        router.post(
+            `/inventario/lotes/${loteSeleccionado.id_lote}/stock`,
+            { cantidad: String(cantidad) },
+            {
+                preserveState: true,
+                replace: true,
+                onSuccess: () => {
+                    setLoteSeleccionadoId(null);
+                    setCantidadAgregar('');
+                },
+            },
+        );
+    };
+
     return (
         <div className="w-full rounded-xl border border-slate-100 bg-white p-4 shadow-inner">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                 <h3 className="font-semibold text-slate-800">📦 Lotes de {data.nombre_producto}</h3>
-                <button
-                    className="cursor-pointer rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 px-3 py-1.5 text-sm font-semibold text-white shadow transition hover:from-blue-700 hover:to-indigo-700 active:scale-95"
-                    onClick={() => router.visit(`/inventario/${data.id_producto}/lotes/agregar`)}
-                >
-                    + Agregar lote
-                </button>
             </div>
             <div className="overflow-x-auto">
                 <table className="min-w-full text-sm">
@@ -56,6 +83,9 @@ function DetalleLotes({ data }: { data: ProductoInventario }) {
                                 </td>
                                 <td className="px-3 py-2">
                                     <div className="flex gap-3 text-sm font-medium">
+                                        <button className="cursor-pointer text-emerald-600 hover:underline" onClick={() => { setLoteSeleccionadoId(l.id_lote); setCantidadAgregar(''); }}>
+                                            ＋ Stock
+                                        </button>
                                         <button className="cursor-pointer text-blue-600 hover:underline" onClick={() => router.visit(`/inventario/lotes/${l.id_lote}/editar`)}>
                                             ✏️ Editar
                                         </button>
@@ -69,6 +99,51 @@ function DetalleLotes({ data }: { data: ProductoInventario }) {
                     </tbody>
                 </table>
             </div>
+
+            {loteSeleccionado && (
+                <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+                    <div className="mb-3 flex items-center justify-between gap-2">
+                        <h4 className="font-semibold text-emerald-800">Agregar stock al lote</h4>
+                        <button className="text-sm font-medium text-slate-500 hover:text-slate-700" onClick={() => { setLoteSeleccionadoId(null); setCantidadAgregar(''); }}>
+                            Cerrar
+                        </button>
+                    </div>
+
+                    <div className="grid gap-4 md:grid-cols-3">
+                        <div className="rounded-xl bg-white px-3 py-2 shadow-sm">
+                            <p className="text-xs uppercase tracking-wide text-slate-500">Lote</p>
+                            <p className="mt-1 font-semibold text-slate-800">{loteSeleccionado.nombre_lote || `Lote #${loteSeleccionado.id_lote}`}</p>
+                        </div>
+                        <div className="rounded-xl bg-white px-3 py-2 shadow-sm">
+                            <p className="text-xs uppercase tracking-wide text-slate-500">Stock actual</p>
+                            <p className="mt-1 font-semibold text-slate-800">{loteSeleccionado.cantidad_disponible} unidades</p>
+                        </div>
+                        <div className="rounded-xl bg-white px-3 py-2 shadow-sm">
+                            <p className="text-xs uppercase tracking-wide text-slate-500">Total en lote</p>
+                            <p className="mt-1 font-semibold text-slate-800">{loteSeleccionado.cantidad} unidades</p>
+                        </div>
+                    </div>
+
+                    <div className="mt-4 flex flex-col gap-2">
+                        <label className="text-sm font-medium text-slate-700">Cantidad que entra</label>
+                        <input
+                            type="number"
+                            min={1}
+                            step={1}
+                            value={cantidadAgregar}
+                            onChange={(e) => setCantidadAgregar(e.target.value)}
+                            className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                            placeholder="Ej. 25"
+                        />
+                        <button
+                            className="mt-2 w-full cursor-pointer rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 p-3 font-semibold text-white shadow-lg transition hover:from-emerald-700 hover:to-teal-700 active:scale-[0.98]"
+                            onClick={agregarStock}
+                        >
+                            Agregar stock al lote
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

@@ -217,6 +217,27 @@ class InventarioController extends Controller
         return redirect()->route('inventario.index')->with('flash', $this->flash('success', 'Lote agregado', 'El nuevo lote se registró correctamente.'));
     }
 
+    public function agregarStockLote(Request $request, Lote $lote)
+    {
+        $datos = $request->validate([
+            'cantidad' => 'required|integer|min:1|max:99999999',
+        ], [
+            'cantidad.required' => 'La cantidad a ingresar es obligatoria.',
+            'cantidad.integer' => 'La cantidad a ingresar debe ser un número entero.',
+            'cantidad.min' => 'La cantidad a ingresar debe ser mayor a 0.',
+        ]);
+
+        $cantidad = (int) $datos['cantidad'];
+
+        $lote->update([
+            'cantidad' => $lote->cantidad + $cantidad,
+            'cantidad_disponible' => $lote->cantidad_disponible + $cantidad,
+            'activo' => true,
+        ]);
+
+        return redirect()->route('inventario.index')->with('flash', $this->flash('success', 'Stock agregado', 'Se agregaron ' . $cantidad . ' unidades al lote.'));
+    }
+
     public function editarLote(Lote $lote)
     {
         $lote->load('producto');
