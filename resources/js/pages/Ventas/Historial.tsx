@@ -22,7 +22,7 @@ export default function Historial({ ventas, filtros }: { ventas: Paginado<VentaH
         router.get('/ventas/historial');
     };
 
-    const totalPagina = ventas.data.reduce((s, v) => s + Number(v.total), 0);
+    const totalPagina = ventas.data.filter((v) => !v.anulado).reduce((s, v) => s + Number(v.total), 0);
     const creditos = ventas.data.filter((v) => v.tipo_pago === 'credito').length;
 
     const resumen = [
@@ -103,7 +103,7 @@ export default function Historial({ ventas, filtros }: { ventas: Paginado<VentaH
                                     <td className="p-4 font-medium text-slate-800">{v.cliente ?? <span className="text-slate-400 font-normal">Público general</span>}</td>
                                     <td className="p-4 text-slate-600">{v.vendedor}</td>
                                     <td className="p-4"><BadgeTipoPago tipo={v.tipo_pago} /></td>
-                                    <td className="p-4 text-right font-bold text-slate-900">Q{Number(v.total).toFixed(2)}</td>
+                                    <td className="p-4 text-right font-bold text-slate-900">Q{Number(v.total).toFixed(2)}{v.anulado && <span className="ml-2 rounded-full bg-rose-100 px-2 py-0.5 text-xs font-bold text-rose-700">Desactivado</span>}</td>
                                     <td className="p-4">
                                         {v.id_comprobante ? (
                                             <Link href={`/comprobantes/${v.id_comprobante}`} className="inline-block rounded-lg bg-blue-50 text-blue-700 px-3 py-1 text-sm font-semibold hover:bg-blue-100 transition">{v.numero_comprobante}</Link>

@@ -1,8 +1,9 @@
 import SistemaLayout from "@/layouts/SistemaLayout/SistemaLayout";
 import { AvisoInterno, BadgeTipoPago } from "@/components/PaginacionVentas/AvisoInterno";
 import { ComprobanteDetalle } from "@/components/Interfaces/interfaceCatalogo";
-import { Head, Link } from "@inertiajs/react";
-import { useState } from "react";
+import { Head, Link, router, usePage } from "@inertiajs/react";
+import { useEffect, useState } from "react";
+import Swal from "sweetalert2";
 
 const leerXsrf = () => {
     const m = document.cookie.match(/(?:^|; )XSRF-TOKEN=([^;]*)/);
@@ -11,6 +12,23 @@ const leerXsrf = () => {
 
 export default function VerComprobante({ comprobante }: { comprobante: ComprobanteDetalle }) {
     const [impresiones, setImpresiones] = useState(comprobante.veces_impreso);
+
+    const { flash } = usePage<{ flash?: { title: string; icon: 'success' | 'error'; message: string } | null }>().props;
+    useEffect(() => { if (flash) Swal.fire({ icon: flash.icon, title: flash.title, text: flash.message, timer: 3000, showConfirmButton: false }); }, [flash]);
+
+    const desactivar = async () => {
+        const r = await Swal.fire({
+            title: '¿Desactivar comprobante?',
+            text: 'Se devolverán los productos al inventario y la venta dejará de sumar en los reportes. Esta acción no se puede revertir.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Sí, desactivar',
+            cancelButtonText: 'Cancelar',
+        });
+        if (r.isConfirmed) router.post(`/comprobantes/${comprobante.id_comprobante}/anular`, {}, { preserveScroll: true });
+    };
 
     const imprimir = async () => {
         window.print();
@@ -32,6 +50,7 @@ export default function VerComprobante({ comprobante }: { comprobante: Comproban
                     <Link href="/comprobantes" className="text-blue-600 hover:underline font-medium">← Volver a comprobantes</Link>
                     <div className="flex items-center gap-3">
                         <span className="rounded-full bg-slate-100 text-slate-600 px-3 py-1 text-sm">🖨️ Impreso {impresiones} {impresiones === 1 ? 'vez' : 'veces'}</span>
+                        {!comprobante.anulado && <button onClick={desactivar} className="rounded-xl bg-rose-50 text-rose-700 px-5 py-2.5 font-semibold hover:bg-rose-100 active:scale-95 transition">Desactivar</button>}
                         <button onClick={imprimir} className="rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-5 py-2.5 font-semibold shadow-lg hover:from-blue-700 hover:to-indigo-700 active:scale-95 transition">Imprimir</button>
                     </div>
                 </div>
@@ -45,6 +64,12 @@ export default function VerComprobante({ comprobante }: { comprobante: Comproban
 
                     <div className="p-6 space-y-5">
                         <AvisoInterno />
+
+                        {comprobante.anulado && (
+                            <div className="rounded-xl border border-rose-300 bg-rose-50 p-4 text-center font-bold text-rose-800">
+                                COMPROBANTE DESACTIVADO{comprobante.fecha_anulacion ? ` el ${comprobante.fecha_anulacion}` : ''}. No tiene valor en ventas ni inventario.
+                            </div>
+                        )}
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm bg-slate-50 rounded-xl p-4 print:bg-transparent print:border">
                             <p><b className="text-slate-500">Fecha:</b> {comprobante.fecha_emision}</p>

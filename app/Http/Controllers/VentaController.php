@@ -241,6 +241,7 @@ class VentaController extends Controller
                 'tipo_pago' => $v->credito ? 'credito' : 'contado',
                 'id_comprobante' => $v->comprobante?->id_comprobante,
                 'numero_comprobante' => $v->comprobante?->numero_comprobante,
+                'anulado' => (bool) $v->anulado,
             ]);
 
         return Inertia::render('Ventas/Historial', [

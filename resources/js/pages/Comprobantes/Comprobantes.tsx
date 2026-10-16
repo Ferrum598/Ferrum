@@ -56,12 +56,15 @@ export default function Comprobantes({ comprobantes, filtros }: { comprobantes: 
                                     </td>
                                 </tr>
                             ) : comprobantes.data.map((c) => (
-                                <tr key={c.id_comprobante} className="hover:bg-blue-50/60 transition-colors">
-                                    <td className="p-4 font-bold text-slate-900">{c.numero_comprobante}</td>
+                                <tr key={c.id_comprobante} className={`transition-colors ${c.anulado ? 'bg-slate-50 text-slate-400' : 'hover:bg-blue-50/60'}`}>
+                                    <td className={`p-4 font-bold ${c.anulado ? 'text-slate-400 line-through' : 'text-slate-900'}`}>
+                                        {c.numero_comprobante}
+                                        {c.anulado && <span className="ml-2 inline-block rounded-full bg-rose-100 px-2.5 py-0.5 text-xs font-bold text-rose-700 no-underline">Desactivado</span>}
+                                    </td>
                                     <td className="p-4 text-slate-600">{c.fecha_emision}</td>
                                     <td className="p-4 font-medium text-slate-800">{c.cliente ?? <span className="text-slate-400 font-normal">Público general</span>}</td>
                                     <td className="p-4"><BadgeTipoPago tipo={c.tipo_pago} /></td>
-                                    <td className="p-4 text-right font-bold text-slate-900">Q{Number(c.total).toFixed(2)}</td>
+                                    <td className={`p-4 text-right font-bold ${c.anulado ? 'text-slate-400 line-through' : 'text-slate-900'}`}>Q{Number(c.total).toFixed(2)}</td>
                                     <td className="p-4 text-center">
                                         <span className={`inline-block rounded-full px-3 py-1 text-xs font-semibold ${c.veces_impreso > 0 ? 'bg-blue-100 text-blue-800' : 'bg-slate-100 text-slate-500'}`}>🖨️ {c.veces_impreso}</span>
                                     </td>
