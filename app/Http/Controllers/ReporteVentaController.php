@@ -16,7 +16,10 @@ class ReporteVentaController extends Controller
             $query->where('tipo_periodo', $request->input('tipo'));
         }
         return Inertia::render('ReportesVentas/ReportesVentas', [
-            'reportes' => $query->get(),
+            'reportes' => $query->get()->map(fn (ReporteVenta $r) => array_merge(
+                $r->toArray(),
+                app(ReportesService::class)->resumenPrecios($r->fecha_inicio, $r->fecha_fin)
+            )),
             'filtroTipo' => $request->input('tipo', ''),
         ]);
     }
@@ -38,7 +41,7 @@ class ReporteVentaController extends Controller
         $ventas = \App\Models\Venta::activas()->with(['cliente', 'detalles.lote.producto', 'credito'])
             ->whereBetween('fecha_venta', [$reporte->fecha_inicio->toDateString().' 00:00:00', $reporte->fecha_fin->toDateString().' 23:59:59'])
             ->orderBy('fecha_venta')->get();
-        return Inertia::render('ReportesVentas/ReportesVentas', ['reporteActual' => $reporte, 'ventasDetalle' => $ventas]);
+        return Inertia::render('ReportesVentas/ReportesVentas', ['reporteActual' => array_merge($reporte->toArray(), app(ReportesService::class)->resumenPrecios($reporte->fecha_inicio, $reporte->fecha_fin)), 'ventasDetalle' => $ventas]);
     }
 
     public function regenerar(ReporteVenta $reporte, Request $request, ReportesService $service)

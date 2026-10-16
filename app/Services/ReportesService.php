@@ -83,6 +83,20 @@ class ReportesService
         });
     }
 
+    // Total vendido (precio de venta), costo (precio de compra) y diferencia de las ventas activas del rango
+    public function resumenPrecios(Carbon $inicio, Carbon $fin): array
+    {
+        $ventas = Venta::query()->activas()->whereBetween('fecha_venta', [$inicio->copy()->startOfDay(), $fin->copy()->endOfDay()]);
+        $totalVentas = round((float) (clone $ventas)->sum('total'), 2);
+        $costo = round((float) DB::table('detalle_venta')
+            ->join('ventas', 'detalle_venta.fk_venta', '=', 'ventas.id_venta')
+            ->where('ventas.anulado', false)
+            ->whereBetween('ventas.fecha_venta', [$inicio->copy()->startOfDay(), $fin->copy()->endOfDay()])
+            ->sum(DB::raw('detalle_venta.cantidad * detalle_venta.costo_unitario')), 2);
+
+        return ['total_ventas' => $totalVentas, 'costo_ventas' => $costo, 'diferencia' => round($totalVentas - $costo, 2)];
+    }
+
     private function rango(string $tipo, Carbon $referencia): array
     {
         $inicio = $referencia->copy();
