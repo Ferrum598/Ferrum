@@ -147,6 +147,15 @@ export default function Ventas() {
         return () => window.removeEventListener('keydown', onKey);
     }, [escanear]);
 
+    // Texto que se está escribiendo en la cantidad (permite dejar el campo vacío mientras se edita)
+    const [textoCantidad, setTextoCantidad] = useState<Record<number, string>>({});
+    const escribirCantidad = (id: number, texto: string) => {
+        if (!/^\d*$/.test(texto)) return;
+        setTextoCantidad((t) => ({ ...t, [id]: texto }));
+        if (texto !== '') cambiarCantidad(id, Number(texto));
+    };
+    const terminarCantidad = (id: number) => setTextoCantidad((t) => { const { [id]: _omitido, ...resto } = t; return resto; });
+
     const cambiarCantidad = (id: number, valor: number) => {
         setCarrito((actual) => actual.map((it) => {
             if (it.id_lote !== id) return it;
@@ -277,7 +286,7 @@ export default function Ventas() {
                                             loading="lazy"
                                             decoding="async"
                                             onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = '/assets/productos/no-hay-imagen.jpg'; }}
-                                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                            className="w-full h-full object-contain p-1 group-hover:scale-105 transition-transform duration-300"
                                         />
                                         {p.categoria && (
                                             <span className="absolute top-2 left-2 rounded-full bg-slate-900/80 text-white text-xs font-medium px-3 py-1 backdrop-blur">{p.categoria}</span>
@@ -286,7 +295,7 @@ export default function Ventas() {
                                     <div className="p-4 flex-1 flex flex-col">
                                         <h2 className="font-bold text-lg text-slate-900 mb-3 leading-tight">{p.nombre_producto}</h2>
                                         {!!p.descuentos?.length && <div className="mb-3 flex flex-wrap gap-1">{p.descuentos.map((d) => <span key={d.cantidad_minima} className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-bold text-emerald-700">🏷️ {d.cantidad_minima}+ u: -{Number(d.porcentaje)}%</span>)}</div>}
-                                        <ul className="space-y-2 mt-auto">
+                                        <ul className="space-y-2 mt-auto max-h-48 overflow-y-auto pr-1">
                                             {p.lotes.map((l) => (
                                                 <li key={l.id_lote} className="flex items-center justify-between gap-2 rounded-xl bg-slate-50 border border-slate-200 p-2 pl-3">
                                                     <div className="text-sm">
@@ -350,11 +359,12 @@ export default function Ventas() {
                                             <div className="flex items-center gap-1">
                                                 <button onClick={() => cambiarCantidad(it.id_lote, it.cantidad - 1)} className="w-7 h-7 rounded border hover:bg-gray-100">-</button>
                                                 <input
-                                                    type="number"
-                                                    min={1}
-                                                    max={it.cantidad_disponible}
-                                                    value={it.cantidad}
-                                                    onChange={(e) => cambiarCantidad(it.id_lote, Number(e.target.value))}
+                                                    type="text"
+                                                    inputMode="numeric"
+                                                    value={textoCantidad[it.id_lote] ?? String(it.cantidad)}
+                                                    onFocus={(e) => e.target.select()}
+                                                    onChange={(e) => escribirCantidad(it.id_lote, e.target.value)}
+                                                    onBlur={() => terminarCantidad(it.id_lote)}
                                                     className="w-16 rounded border p-1 text-center"
                                                 />
                                                 <button onClick={() => cambiarCantidad(it.id_lote, it.cantidad + 1)} className="w-7 h-7 rounded border hover:bg-gray-100">+</button>
