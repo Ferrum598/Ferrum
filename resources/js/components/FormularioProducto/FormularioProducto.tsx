@@ -19,7 +19,7 @@ const inputClase = 'w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 
 const labelClase = 'text-sm font-medium text-slate-700';
 const hoy = () => new Date().toISOString().slice(0, 10);
 
-export default function FormularioProducto({ producto, categorias }: { producto?: ProductoEdicion; categorias?: Categoria[] }) {
+export default function FormularioProducto({ producto, categorias, children }: { producto?: ProductoEdicion; categorias?: Categoria[]; children?: React.ReactNode }) {
     const [imagenPreview, setImagenPreview] = useState<string | null>(null);
     const { data, setData, post, processing, errors } = useForm<ProductoForm>({
         nombre_producto: producto?.nombre_producto ?? '',
@@ -63,8 +63,9 @@ export default function FormularioProducto({ producto, categorias }: { producto?
                 {producto ? '✏️ Editar producto' : '📦 Agregar producto'}
             </h1>
 
+            <div className={producto ? 'grid items-start gap-6 md:grid-cols-2' : ''}>
             <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-                <div className="grid gap-6 md:grid-cols-2">
+                <div className={`grid gap-6 ${producto ? '' : 'md:grid-cols-2'}`}>
                     <div className="flex flex-col gap-4 rounded-2xl border border-slate-100 bg-white p-6 shadow-md">
                         <h2 className="font-semibold text-slate-800">Datos del producto</h2>
                         <div className="mx-auto w-full max-w-[220px] overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-100 to-slate-200 shadow-sm">
@@ -111,13 +112,15 @@ export default function FormularioProducto({ producto, categorias }: { producto?
                     )}
                 </div>
                 <button
-                    className="w-full cursor-pointer self-center rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 p-3 font-semibold text-white shadow-lg transition hover:from-blue-700 hover:to-indigo-700 active:scale-[0.98] disabled:opacity-50 md:w-1/3"
+                    className={`w-full cursor-pointer self-center rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 p-3 font-semibold text-white shadow-lg transition hover:from-blue-700 hover:to-indigo-700 active:scale-[0.98] disabled:opacity-50 ${producto ? '' : 'md:w-1/3'}`}
                     type="submit"
                     disabled={processing}
                 >
                     {producto ? 'Guardar Cambios' : 'Agregar Producto'}
                 </button>
             </form>
+            {producto && children}
+            </div>
         </div>
     );
 }

@@ -94,6 +94,8 @@ class ComprobanteController extends Controller
                     'cantidad' => (int) $d->cantidad,
                     'precio_unitario' => (string) $d->precio_unitario,
                     'subtotal' => (string) $d->subtotal,
+                    'descuento_porcentaje' => (float) $d->descuento_porcentaje,
+                    'descuento_monto' => (string) $d->descuento_monto,
                 ])->values(),
             ],
         ]);

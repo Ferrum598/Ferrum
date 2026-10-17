@@ -2,7 +2,7 @@ import SistemaLayout from "@/layouts/SistemaLayout/SistemaLayout";
 import { Head, Link } from "@inertiajs/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Swal from "sweetalert2";
-import { ClienteVenta, ItemCarrito, LoteVenta, ProductoVenta } from "@/components/Interfaces/interfaceCatalogo";
+import { ClienteVenta, DescuentoRegla, ItemCarrito, LoteVenta, ProductoVenta } from "@/components/Interfaces/interfaceCatalogo";
 
 const leerXsrf = () => {
     const m = document.cookie.match(/(?:^|; )XSRF-TOKEN=([^;]*)/);
@@ -32,6 +32,9 @@ const primerError = (data: any): string => {
 };
 
 const dinero = (n: number) => `Q${n.toFixed(2)}`;
+const redondear = (n: number) => Math.round(n * 100) / 100;
+const porcentajeParaCantidad = (reglas: DescuentoRegla[], cantidad: number) =>
+    reglas.reduce((max, r) => (cantidad >= r.cantidad_minima && Number(r.porcentaje) > max ? Number(r.porcentaje) : max), 0);
 const manana = () => {
     const d = new Date();
     d.setDate(d.getDate() + 1);
@@ -85,11 +88,13 @@ export default function Ventas() {
         return () => clearTimeout(t);
     }, [buscarCliente, cliente]);
 
-    const agregarAlCarrito = useCallback((producto: string, lote: LoteVenta) => {
+    const agregarAlCarrito = useCallback((producto: string, lote: LoteVenta, id_producto: number, descuentos: DescuentoRegla[] = []) => {
         setCarrito((actual) => {
             const i = actual.findIndex((it) => it.id_lote === lote.id_lote);
             if (i === -1) {
                 return [...actual, {
+                    id_producto,
+                    descuentos,
                     id_lote: lote.id_lote,
                     producto,
                     nombre_lote: lote.nombre_lote,
@@ -109,7 +114,7 @@ export default function Ventas() {
     const escanear = useCallback(async (codigo: string) => {
         const r = await peticion(`/ventas/codigo/${encodeURIComponent(codigo)}`);
         if (r.ok && r.data?.found) {
-            agregarAlCarrito(r.data.producto, r.data.lote);
+            agregarAlCarrito(r.data.producto, r.data.lote, r.data.id_producto, r.data.descuentos ?? []);
             Swal.fire({ icon: 'success', title: `${r.data.producto} (${r.data.lote.nombre_lote}) agregado`, timer: 1200, showConfirmButton: false, timerProgressBar: true });
         } else {
             Swal.fire({ icon: 'warning', title: `No se encontró un lote disponible con el código: ${codigo}`, timer: 2000, showConfirmButton: false, timerProgressBar: true });
@@ -150,7 +155,19 @@ export default function Ventas() {
         }));
     };
 
-    const total = useMemo(() => carrito.reduce((s, it) => s + it.precio_venta * it.cantidad, 0), [carrito]);
+    // El descuento depende de la cantidad total del producto en el carrito (suma de sus lotes)
+    const lineas = useMemo(() => {
+        const porProducto: Record<number, number> = {};
+        carrito.forEach((it) => { porProducto[it.id_producto] = (porProducto[it.id_producto] ?? 0) + it.cantidad; });
+        return carrito.map((it) => {
+            const porcentaje = porcentajeParaCantidad(it.descuentos, porProducto[it.id_producto]);
+            const bruto = redondear(it.precio_venta * it.cantidad);
+            const descuento = redondear(bruto * porcentaje / 100);
+            return { id_lote: it.id_lote, porcentaje, bruto, descuento, subtotal: redondear(bruto - descuento) };
+        });
+    }, [carrito]);
+    const total = useMemo(() => redondear(lineas.reduce((s, l) => s + l.subtotal, 0)), [lineas]);
+    const totalDescuento = useMemo(() => redondear(lineas.reduce((s, l) => s + l.descuento, 0)), [lineas]);
 
     const crearCliente = async () => {
         const r = await peticion('/clientes/rapido', {
@@ -268,6 +285,7 @@ export default function Ventas() {
                                     </div>
                                     <div className="p-4 flex-1 flex flex-col">
                                         <h2 className="font-bold text-lg text-slate-900 mb-3 leading-tight">{p.nombre_producto}</h2>
+                                        {!!p.descuentos?.length && <div className="mb-3 flex flex-wrap gap-1">{p.descuentos.map((d) => <span key={d.cantidad_minima} className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-bold text-emerald-700">🏷️ {d.cantidad_minima}+ u: -{Number(d.porcentaje)}%</span>)}</div>}
                                         <ul className="space-y-2 mt-auto">
                                             {p.lotes.map((l) => (
                                                 <li key={l.id_lote} className="flex items-center justify-between gap-2 rounded-xl bg-slate-50 border border-slate-200 p-2 pl-3">
@@ -276,7 +294,7 @@ export default function Ventas() {
                                                         <div className="text-slate-500 text-xs">{l.nombre_lote} · {l.cantidad_disponible} disp.{l.fecha_ingreso ? ` · ${l.fecha_ingreso}` : ''}</div>
                                                     </div>
                                                     <button
-                                                        onClick={() => agregarAlCarrito(p.nombre_producto, l)}
+                                                        onClick={() => agregarAlCarrito(p.nombre_producto, l, p.id_producto, p.descuentos ?? [])}
                                                         className="rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-3 py-2 text-sm font-semibold shadow hover:from-blue-700 hover:to-indigo-700 active:scale-95 transition"
                                                     >
                                                         + Agregar
@@ -319,7 +337,10 @@ export default function Ventas() {
                             <p className="text-gray-500">Aún no hay productos.</p>
                         ) : (
                             <ul className="divide-y">
-                                {carrito.map((it) => (
+                                {carrito.map((it) => {
+                                    const linea = lineas.find((l) => l.id_lote === it.id_lote)!;
+                                    const siguiente = it.descuentos.filter((r) => r.cantidad_minima > it.cantidad).sort((a, b) => a.cantidad_minima - b.cantidad_minima)[0];
+                                    return (
                                     <li key={it.id_lote} className="py-2 space-y-1">
                                         <div className="flex justify-between gap-2">
                                             <span className="font-semibold">{it.producto} <span className="text-gray-500 font-normal">({it.nombre_lote})</span></span>
@@ -339,14 +360,21 @@ export default function Ventas() {
                                                 <button onClick={() => cambiarCantidad(it.id_lote, it.cantidad + 1)} className="w-7 h-7 rounded border hover:bg-gray-100">+</button>
                                                 <span className="text-gray-500 ml-1">x {dinero(it.precio_venta)}</span>
                                             </div>
-                                            <b>{dinero(it.precio_venta * it.cantidad)}</b>
+                                            <div className="text-right">
+                                                {linea.descuento > 0 && <div className="text-xs text-gray-400 line-through">{dinero(linea.bruto)}</div>}
+                                                <b>{dinero(linea.subtotal)}</b>
+                                            </div>
                                         </div>
+                                        {linea.porcentaje > 0 && <div className="text-xs font-semibold text-emerald-700">🏷️ Descuento {linea.porcentaje}% · ahorra {dinero(linea.descuento)}</div>}
+                                        {siguiente && <div className="text-xs text-amber-700">Desde {siguiente.cantidad_minima} u. de este producto: {siguiente.porcentaje}% de descuento</div>}
                                         <div className="text-xs text-gray-400">Máx. {it.cantidad_disponible}</div>
                                     </li>
-                                ))}
+                                    );
+                                })}
                             </ul>
                         )}
 
+                        {totalDescuento > 0 && <div className="flex justify-between text-sm font-semibold text-emerald-700 border-t pt-2"><span>Descuentos aplicados</span><span>-{dinero(totalDescuento)}</span></div>}
                         <div className="flex justify-between text-xl font-bold border-t pt-2">
                             <span>Total</span><span>{dinero(total)}</span>
                         </div>

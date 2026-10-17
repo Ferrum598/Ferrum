@@ -18,6 +18,8 @@ Route::middleware('permiso:inventario')->prefix('inventario')->group(function ()
     Route::post('/{producto}/actualizar', [InventarioController::class, 'actualizar'])->whereNumber('producto')->name('inventario.actualizar');
     Route::post('/{producto}/eliminar', [InventarioController::class, 'eliminar'])->whereNumber('producto')->name('inventario.eliminar');
 
+    Route::post('/{producto}/descuentos', [InventarioController::class, 'guardarDescuento'])->whereNumber('producto')->name('descuentos.guardar');
+    Route::delete('/descuentos/{descuento}', [InventarioController::class, 'eliminarDescuento'])->whereNumber('descuento')->name('descuentos.eliminar');
     Route::get('/{producto}/lotes/agregar', [InventarioController::class, 'crearLote'])->whereNumber('producto')->name('lotes.crear');
     Route::post('/{producto}/lotes', [InventarioController::class, 'guardarLote'])->whereNumber('producto')->name('lotes.guardar');
     Route::post('/lotes/{lote}/stock', [InventarioController::class, 'agregarStockLote'])->whereNumber('lote')->name('lotes.stock');

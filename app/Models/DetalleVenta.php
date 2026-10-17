@@ -9,7 +9,7 @@ class DetalleVenta extends Model
     protected $table = 'detalle_venta';
     protected $primaryKey = 'id_detalle';
 
-    protected $fillable = ['fk_venta', 'fk_lote', 'cantidad', 'precio_unitario', 'costo_unitario', 'subtotal'];
+    protected $fillable = ['fk_venta', 'fk_lote', 'cantidad', 'precio_unitario', 'costo_unitario', 'subtotal', 'descuento_porcentaje', 'descuento_monto'];
 
     public function venta()
     {
