@@ -95,7 +95,7 @@ export default function VerComprobante({ comprobante }: { comprobante: Comproban
                                         <td className="p-2 text-slate-600">{d.lote}</td>
                                         <td className="p-2 text-right">{d.cantidad}</td>
                                         <td className="p-2 text-right">Q{Number(d.precio_unitario).toFixed(2)}</td>
-                                        <td className="p-2 text-right font-semibold">Q{Number(d.subtotal).toFixed(2)}</td>
+                                        <td className="p-2 text-right font-semibold">Q{Number(d.subtotal).toFixed(2)}{d.descuento_porcentaje > 0 && <div className="text-xs font-normal text-emerald-700 print:text-black">Desc. {d.descuento_porcentaje}% (-Q{Number(d.descuento_monto).toFixed(2)})</div>}</td>
                                     </tr>
                                 ))}
                             </tbody>

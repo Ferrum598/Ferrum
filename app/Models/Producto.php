@@ -29,6 +29,11 @@ class Producto extends Model
         return $this->belongsTo(ImagenProducto::class, 'fk_imagen_producto', 'id_imagen_producto');
     }
 
+    public function descuentos()
+    {
+        return $this->hasMany(DescuentoProducto::class, 'fk_producto', 'id_producto')->orderBy('cantidad_minima');
+    }
+
     public function lotes()
     {
         return $this->hasMany(Lote::class, 'fk_producto', 'id_producto');
