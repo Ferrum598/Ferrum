@@ -9,12 +9,17 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware('permiso:inventario')->prefix('inventario')->group(function () {
     Route::get('/', [InventarioController::class, 'index'])->name('inventario.index');
+    Route::get('/ids', [InventarioController::class, 'idsProductos'])->name('inventario.ids');
+    Route::get('/imprimir', [InventarioController::class, 'imprimir'])->name('inventario.imprimir');
+    Route::post('/imprimir/datos', [InventarioController::class, 'datosImpresion'])->name('inventario.imprimir.datos');
     Route::get('/agregar', [InventarioController::class, 'crear'])->name('inventario.crear');
     Route::post('/guardar', [InventarioController::class, 'guardar'])->name('inventario.guardar');
     Route::get('/{producto}/editar', [InventarioController::class, 'editar'])->whereNumber('producto')->name('inventario.editar');
     Route::post('/{producto}/actualizar', [InventarioController::class, 'actualizar'])->whereNumber('producto')->name('inventario.actualizar');
     Route::post('/{producto}/eliminar', [InventarioController::class, 'eliminar'])->whereNumber('producto')->name('inventario.eliminar');
 
+    Route::post('/{producto}/descuentos', [InventarioController::class, 'guardarDescuento'])->whereNumber('producto')->name('descuentos.guardar');
+    Route::delete('/descuentos/{descuento}', [InventarioController::class, 'eliminarDescuento'])->whereNumber('descuento')->name('descuentos.eliminar');
     Route::get('/{producto}/lotes/agregar', [InventarioController::class, 'crearLote'])->whereNumber('producto')->name('lotes.crear');
     Route::post('/{producto}/lotes', [InventarioController::class, 'guardarLote'])->whereNumber('producto')->name('lotes.guardar');
     Route::post('/lotes/{lote}/stock', [InventarioController::class, 'agregarStockLote'])->whereNumber('lote')->name('lotes.stock');

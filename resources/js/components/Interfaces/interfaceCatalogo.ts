@@ -6,8 +6,14 @@ export interface LoteVenta {
     fecha_ingreso: string | null;
 }
 
+export interface DescuentoRegla {
+    cantidad_minima: number;
+    porcentaje: number;
+}
+
 export interface ProductoVenta {
     id_producto: number;
+    descuentos?: DescuentoRegla[];
     nombre_producto: string;
     categoria?: string | null;
     imagen?: string;
@@ -15,6 +21,8 @@ export interface ProductoVenta {
 }
 
 export interface ItemCarrito {
+    id_producto: number;
+    descuentos: DescuentoRegla[];
     id_lote: number;
     producto: string;
     nombre_lote: string;
@@ -47,6 +55,7 @@ export interface VentaHistorial {
     tipo_pago: 'contado' | 'credito';
     id_comprobante: number | null;
     numero_comprobante: string | null;
+    anulado: boolean;
 }
 
 export interface ComprobanteLista {
@@ -57,6 +66,7 @@ export interface ComprobanteLista {
     cliente: string | null;
     tipo_pago: 'contado' | 'credito';
     veces_impreso: number;
+    anulado: boolean;
 }
 
 export interface ComprobanteDetalle {
@@ -65,9 +75,11 @@ export interface ComprobanteDetalle {
     fecha_emision: string;
     total: string;
     veces_impreso: number;
+    anulado: boolean;
+    fecha_anulacion: string | null;
     vendedor: string | null;
     cliente: { nombre: string; numero: string | null } | null;
     tipo_pago: 'contado' | 'credito';
     credito: { fecha_vencimiento: string; saldo_pendiente: string; estado: string } | null;
-    detalles: { id_detalle: number; producto: string | null; lote: string | null; cantidad: number; precio_unitario: string; subtotal: string }[];
+    detalles: { id_detalle: number; producto: string | null; lote: string | null; cantidad: number; precio_unitario: string; subtotal: string; descuento_porcentaje: number; descuento_monto: string }[];
 }

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Comprobante;
 use App\Models\Credito;
+use App\Models\DescuentoProducto;
 use App\Models\Lote;
 use App\Models\Venta;
 use App\Models\DetalleVenta;
@@ -42,7 +43,7 @@ class VentaController extends Controller
             ->where('activo', true)
             ->whereHas('lotesDisponibles')
             ->when($q !== '', fn($query) => $query->where('nombre_producto', 'like', "%{$q}%"))
-            ->with(['categoria:id_categoria,nombre_categoria', 'lotesDisponibles' => fn($query) => $query->orderBy('fecha_ingreso')->orderBy('id_lote')])
+            ->with(['categoria:id_categoria,nombre_categoria', 'descuentos', 'lotesDisponibles' => fn($query) => $query->orderBy('fecha_ingreso')->orderBy('id_lote')])
             ->orderBy('nombre_producto')
             ->paginate(12)
             ->through(fn($p) => [
@@ -52,6 +53,7 @@ class VentaController extends Controller
                 'imagen' => $p->fk_imagen_producto
                     ? route('ventas.imagen', $p->id_producto) . '?v=' . $p->fk_imagen_producto
                     : '/assets/productos/no-hay-imagen.jpg',
+                'descuentos' => $p->descuentos->map(fn($d) => ['cantidad_minima' => $d->cantidad_minima, 'porcentaje' => $d->porcentaje])->values(),
                 'lotes' => $p->lotesDisponibles->map(fn($l) => $this->formatearLote($l))->values(),
             ]);
 
@@ -84,7 +86,7 @@ class VentaController extends Controller
             ->where('activo', true)
             ->where('cantidad_disponible', '>', 0)
             ->whereHas('codigos', fn($q) => $q->where('codigo', $codigo)->where('activo', true))
-            ->with('producto')
+            ->with('producto.descuentos')
             ->first();
 
         if (!$lote) {
@@ -94,6 +96,8 @@ class VentaController extends Controller
         return response()->json([
             'found' => true,
             'producto' => $lote->producto?->nombre_producto,
+            'id_producto' => $lote->fk_producto,
+            'descuentos' => $lote->producto?->descuentos->map(fn($d) => ['cantidad_minima' => $d->cantidad_minima, 'porcentaje' => $d->porcentaje])->values() ?? [],
             'lote' => $this->formatearLote($lote),
         ]);
     }
@@ -136,6 +140,16 @@ class VentaController extends Controller
                 ->get()
                 ->keyBy('id_lote');
 
+            // Descuento por producto según la cantidad total de ese producto en la venta (suma de sus lotes)
+            $porProducto = [];
+            foreach ($cantidades as $idLote => $cantidad) {
+                $lote = $lotes->get($idLote);
+                if ($lote) {
+                    $porProducto[$lote->fk_producto] = ($porProducto[$lote->fk_producto] ?? 0) + $cantidad;
+                }
+            }
+            $reglas = DescuentoProducto::whereIn('fk_producto', array_keys($porProducto))->get()->groupBy('fk_producto');
+
             $total = 0.0;
             $lineas = [];
             foreach ($cantidades as $idLote => $cantidad) {
@@ -148,9 +162,12 @@ class VentaController extends Controller
                         'items' => "Stock insuficiente en el lote {$lote->nombre_lote}: disponibles {$lote->cantidad_disponible}.",
                     ]);
                 }
-                $subtotal = round((float) $lote->precio_venta * $cantidad, 2);
+                $porcentaje = DescuentoProducto::porcentajeParaCantidad($reglas->get($lote->fk_producto, []), $porProducto[$lote->fk_producto]);
+                $bruto = round((float) $lote->precio_venta * $cantidad, 2);
+                $descuento = round($bruto * $porcentaje / 100, 2);
+                $subtotal = round($bruto - $descuento, 2);
                 $total += $subtotal;
-                $lineas[] = [$lote, $cantidad, $subtotal];
+                $lineas[] = [$lote, $cantidad, $subtotal, $porcentaje, $descuento];
             }
             $total = round($total, 2);
 
@@ -161,7 +178,7 @@ class VentaController extends Controller
                 'fk_usuario' => Auth::id(),
             ]);
 
-            foreach ($lineas as [$lote, $cantidad, $subtotal]) {
+            foreach ($lineas as [$lote, $cantidad, $subtotal, $porcentaje, $descuento]) {
                 DetalleVenta::create([
                     'fk_venta' => $venta->id_venta,
                     'fk_lote' => $lote->id_lote,
@@ -169,6 +186,8 @@ class VentaController extends Controller
                     'precio_unitario' => $lote->precio_venta,
                     'costo_unitario' => $lote->precio_compra,
                     'subtotal' => $subtotal,
+                    'descuento_porcentaje' => $porcentaje,
+                    'descuento_monto' => $descuento,
                 ]);
                 $restante = $lote->cantidad_disponible - $cantidad;
                 $lote->update([
@@ -241,6 +260,7 @@ class VentaController extends Controller
                 'tipo_pago' => $v->credito ? 'credito' : 'contado',
                 'id_comprobante' => $v->comprobante?->id_comprobante,
                 'numero_comprobante' => $v->comprobante?->numero_comprobante,
+                'anulado' => (bool) $v->anulado,
             ]);
 
         return Inertia::render('Ventas/Historial', [

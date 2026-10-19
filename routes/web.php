@@ -27,4 +27,5 @@ Route::middleware('acceso.pagina')->group(function () {
     require __DIR__ . '/modulos/ventas.php';      // punto de venta, historial, comprobantes
     require __DIR__ . '/modulos/creditos.php';    // clientes, créditos, abonos
     require __DIR__ . '/modulos/reportes.php';    // dashboard, reportes de ventas/ganancias, gastos fijos
+    require __DIR__ . '/modulos/usuarios.php';    // usuarios, roles y permisos (solo Administrador)
 });

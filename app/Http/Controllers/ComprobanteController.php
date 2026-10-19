@@ -3,6 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\Comprobante;
+use App\Models\Lote;
+use App\Models\ReporteGanancia;
+use App\Models\ReporteVenta;
+use App\Services\ReportesService;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -39,6 +46,7 @@ class ComprobanteController extends Controller
                     : null,
                 'tipo_pago' => $c->venta?->credito ? 'credito' : 'contado',
                 'veces_impreso' => (int) $c->veces_impreso,
+                'anulado' => (bool) $c->anulado,
             ]);
 
         return Inertia::render('Comprobantes/Comprobantes', [
@@ -66,6 +74,8 @@ class ComprobanteController extends Controller
                 'fecha_emision' => $c->fecha_emision?->format('Y-m-d H:i'),
                 'total' => (string) $c->total,
                 'veces_impreso' => (int) $c->veces_impreso,
+                'anulado' => (bool) $c->anulado,
+                'fecha_anulacion' => $c->fecha_anulacion?->format('Y-m-d H:i'),
                 'vendedor' => $c->usuario ? trim($c->usuario->nombre . ' ' . $c->usuario->apellido) : null,
                 'cliente' => $venta->cliente ? [
                     'nombre' => trim($venta->cliente->nombre_cliente . ' ' . $venta->cliente->apellido_cliente),
@@ -84,6 +94,8 @@ class ComprobanteController extends Controller
                     'cantidad' => (int) $d->cantidad,
                     'precio_unitario' => (string) $d->precio_unitario,
                     'subtotal' => (string) $d->subtotal,
+                    'descuento_porcentaje' => (float) $d->descuento_porcentaje,
+                    'descuento_monto' => (string) $d->descuento_monto,
                 ])->values(),
             ],
         ]);
@@ -95,5 +107,60 @@ class ComprobanteController extends Controller
         $c->increment('veces_impreso');
 
         return response()->json(['veces_impreso' => (int) $c->fresh()->veces_impreso]);
+    }
+
+    // Anula el comprobante: devuelve el stock, excluye la venta de los totales y no se puede revertir
+    public function anular(Request $request, int $id, ReportesService $reportes)
+    {
+        $fechaVenta = null;
+
+        try {
+            DB::transaction(function () use ($id, $request, &$fechaVenta) {
+                $c = Comprobante::whereKey($id)->lockForUpdate()->firstOrFail();
+                if ($c->anulado) {
+                    throw ValidationException::withMessages(['comprobante' => 'Este comprobante ya está anulado.']);
+                }
+
+                $venta = $c->venta()->with(['detalles', 'credito.abonos'])->firstOrFail();
+                if ($venta->credito && $venta->credito->abonos->isNotEmpty()) {
+                    throw ValidationException::withMessages(['comprobante' => 'No se puede anular: el crédito de esta venta ya tiene abonos registrados.']);
+                }
+
+                // Devuelve al inventario lo que se descontó en la venta
+                foreach ($venta->detalles->sortBy('fk_lote')->groupBy('fk_lote') as $idLote => $detalles) {
+                    $lote = Lote::whereKey($idLote)->lockForUpdate()->first();
+                    if ($lote) {
+                        $lote->update([
+                            'cantidad_disponible' => $lote->cantidad_disponible + $detalles->sum('cantidad'),
+                            'activo' => true,
+                        ]);
+                    }
+                }
+
+                // El crédito deja de ser deuda del cliente
+                if ($venta->credito) {
+                    $venta->credito->update(['saldo_pendiente' => '0.00', 'estado' => 'pagado']);
+                }
+
+                $venta->update(['anulado' => true]);
+                $c->update([
+                    'anulado' => true,
+                    'fecha_anulacion' => now(),
+                    'fk_usuario_anulacion' => $request->user()->getAuthIdentifier(),
+                ]);
+                $fechaVenta = $venta->fecha_venta;
+            });
+        } catch (ValidationException $e) {
+            return back()->with('flash', ['title' => 'No se pudo anular', 'icon' => 'error', 'message' => collect($e->errors())->flatten()->first()]);
+        }
+
+        // Recalcula los reportes ya generados que incluían esta venta
+        $usuario = (int) $request->user()->getAuthIdentifier();
+        ReporteVenta::whereDate('fecha_inicio', '<=', $fechaVenta)->whereDate('fecha_fin', '>=', $fechaVenta)->get()
+            ->each(fn (ReporteVenta $r) => $reportes->generarReporteVentas($r->tipo_periodo, Carbon::parse($r->fecha_inicio), $usuario));
+        ReporteGanancia::where('mes', $fechaVenta->month)->where('anio', $fechaVenta->year)->get()
+            ->each(fn (ReporteGanancia $r) => $reportes->generarReporteGanancias((int) $r->mes, (int) $r->anio, $usuario));
+
+        return back()->with('flash', ['title' => 'Comprobante anulado', 'icon' => 'success', 'message' => 'El stock se devolvió al inventario y la venta ya no cuenta en los reportes.']);
     }
 }

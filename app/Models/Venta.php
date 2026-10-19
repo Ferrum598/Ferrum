@@ -9,9 +9,15 @@ class Venta extends Model
     protected $table = 'ventas';
     protected $primaryKey = 'id_venta';
 
-    protected $fillable = ['fecha_venta', 'total', 'fk_cliente', 'fk_usuario'];
+    protected $fillable = ['fecha_venta', 'total', 'fk_cliente', 'fk_usuario', 'anulado'];
 
-    protected $casts = ['fecha_venta' => 'datetime', 'total' => 'decimal:2'];
+    protected $casts = ['fecha_venta' => 'datetime', 'total' => 'decimal:2', 'anulado' => 'boolean'];
+
+    // Excluye las ventas de comprobantes anulados (no cuentan en reportes ni totales)
+    public function scopeActivas($query)
+    {
+        return $query->where('ventas.anulado', false);
+    }
 
     public function cliente()
     {

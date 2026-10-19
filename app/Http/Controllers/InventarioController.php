@@ -104,6 +104,50 @@ class InventarioController extends Controller
         ]);
     }
 
+    // IDs de todos los productos activos que coinciden con la búsqueda (para "seleccionar todos")
+    public function idsProductos(Request $request)
+    {
+        $buscar = trim((string) $request->query('buscar', ''));
+        $query = Producto::where('activo', true);
+
+        if ($buscar !== '') {
+            $like = '%' . mb_strtolower($buscar) . '%';
+            $query->where(function ($q) use ($like) {
+                $q->whereRaw('LOWER(nombre_producto) LIKE ?', [$like])
+                    ->orWhereHas('lotes.codigos', fn ($c) => $c->whereRaw('LOWER(codigo) LIKE ?', [$like]));
+            });
+        }
+
+        return response()->json($query->pluck('id_producto'));
+    }
+
+    public function imprimir()
+    {
+        return Inertia::render('Inventario/ImprimirInventario');
+    }
+
+    // Datos de los productos elegidos para el reporte impreso
+    public function datosImpresion(Request $request)
+    {
+        $datos = $request->validate(['ids' => 'required|array|min:1', 'ids.*' => 'integer']);
+
+        $productos = Producto::with(['categoria', 'lotes' => fn ($q) => $q->where('activo', true)])
+            ->where('activo', true)
+            ->whereIn('id_producto', $datos['ids'])
+            ->orderBy('nombre_producto')
+            ->get()
+            ->map(fn (Producto $p) => [
+                'id_producto' => $p->id_producto,
+                'nombre_producto' => $p->nombre_producto,
+                'categoria' => $p->categoria?->nombre_categoria,
+                'existencias' => (int) $p->lotes->sum('cantidad_disponible'),
+                'precio_min' => $p->lotes->isNotEmpty() ? (float) $p->lotes->min('precio_venta') : null,
+                'precio_max' => $p->lotes->isNotEmpty() ? (float) $p->lotes->max('precio_venta') : null,
+            ]);
+
+        return response()->json($productos);
+    }
+
     public function crear()
     {
         return Inertia::render('AgregarProducto/AgregarProducto', [
@@ -155,7 +199,34 @@ class InventarioController extends Controller
                 'imagen' => $producto->imagen ? $producto->imagen->dataUri() : null,
             ],
             'categorias' => Categoria::orderBy('nombre_categoria')->get(['id_categoria', 'nombre_categoria']),
+            'descuentos' => $producto->descuentos()->get(['id_descuento', 'cantidad_minima', 'porcentaje']),
         ]);
+    }
+
+    public function guardarDescuento(Request $request, Producto $producto)
+    {
+        $datos = $request->validate([
+            'cantidad_minima' => 'required|integer|min:2|max:99999999',
+            'porcentaje' => 'required|numeric|gt:0|max:100',
+        ], [
+            'cantidad_minima.required' => 'Indique desde qué cantidad aplica el descuento.',
+            'cantidad_minima.min' => 'La cantidad mínima debe ser 2 o más.',
+            'porcentaje.required' => 'Indique el porcentaje de descuento.',
+            'porcentaje.gt' => 'El descuento debe ser mayor a 0.',
+            'porcentaje.max' => 'El descuento no puede ser mayor a 100%.',
+        ]);
+
+        // Una sola regla por cantidad mínima: si ya existe, se actualiza su porcentaje
+        $producto->descuentos()->updateOrCreate(['cantidad_minima' => $datos['cantidad_minima']], ['porcentaje' => $datos['porcentaje']]);
+
+        return back()->with('flash', $this->flash('success', 'Descuento guardado', 'Se aplicará automáticamente en las ventas.'));
+    }
+
+    public function eliminarDescuento(\App\Models\DescuentoProducto $descuento)
+    {
+        $descuento->delete();
+
+        return back()->with('flash', $this->flash('success', 'Descuento eliminado', 'La regla de descuento se eliminó.'));
     }
 
     public function actualizar(Request $request, Producto $producto)

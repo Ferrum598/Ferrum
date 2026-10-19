@@ -9,6 +9,7 @@ const opcionesMenu = [
     { href: '/dashboard', permiso: 'dashboard', texto: 'Dashboard', icono: '/assets/icon/dashboard.png' },
     { href: '/ventas', permiso: 'ventas', texto: 'Ventas', icono: '/assets/icon/catalogo.png' },
     { href: '/comprobantes', permiso: 'comprobantes', texto: 'Comprobantes', icono: '/assets/icon/facturacion.png' },
+    { href: '/cotizaciones', permiso: 'ventas', texto: 'Cotizaciones', icono: '/assets/icon/pedido.png' },
     { href: '/inventario', permiso: 'inventario', texto: 'Inventario', icono: '/assets/icon/inventario.png' },
     { href: '/codigos-barras', permiso: 'codigos_barras', texto: 'Códigos de barras', icono: '/assets/icon/pedido.png' },
     { href: '/clientes', permiso: 'clientes', texto: 'Clientes', icono: '/assets/icon/carrito.png' },
@@ -17,6 +18,7 @@ const opcionesMenu = [
     { href: '/reportes/ganancias', permiso: 'reportes', texto: 'Ganancias', icono: '/assets/icon/dashboard.png' },
     { href: '/gastos-fijos', permiso: 'gastos', texto: 'Gastos fijos', icono: '/assets/icon/facturacion.png' },
     { href: '/categorias', permiso: 'categorias', texto: 'Categorías', icono: '/assets/icon/categorias.png' },
+    { href: '/usuarios', permiso: 'usuarios', texto: 'Usuarios', icono: '/assets/icon/carrito.png', soloAdmin: true },
 ];
 
 export default function BarraDeNavegacion() {
@@ -135,7 +137,7 @@ export default function BarraDeNavegacion() {
                     <nav className="mb-6 w-full border-t border-white/10 pt-5 text-base text-slate-200">
                         <ul className="space-y-1.5">
                             {opcionesMenu
-                                .filter((opcion) => permisos.includes(opcion.permiso))
+                                .filter((opcion) => ('soloAdmin' in opcion ? rol === 'Administrador' : permisos.includes(opcion.permiso)))
                                 .map((opcion) => (
                                     <li
                                         key={opcion.href}

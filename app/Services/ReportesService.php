@@ -16,7 +16,7 @@ class ReportesService
     public function generarReporteVentas(string $tipo, Carbon $referencia, int $usuarioId): ReporteVenta
     {
         [$inicio, $fin] = $this->rango($tipo, $referencia);
-        $ventas = Venta::query()->whereBetween('fecha_venta', [$inicio->copy()->startOfDay(), $fin->copy()->endOfDay()]);
+        $ventas = Venta::query()->activas()->whereBetween('fecha_venta', [$inicio->copy()->startOfDay(), $fin->copy()->endOfDay()]);
         $totalContado = (clone $ventas)->whereDoesntHave('credito')->sum('total');
         $totalCredito = (clone $ventas)->whereHas('credito')->sum('total');
         $totalAbonos = AbonoCredito::query()->whereBetween('fecha_abono', [$inicio->toDateString(), $fin->toDateString()])->sum('monto');
@@ -41,7 +41,7 @@ class ReportesService
         $fin = $inicio->copy()->endOfMonth()->endOfDay();
 
         return DB::transaction(function () use ($mes, $anio, $usuarioId, $inicio, $fin) {
-            $ventasContado = Venta::query()->whereBetween('fecha_venta', [$inicio, $fin])->whereDoesntHave('credito')->with('detalles')->get();
+            $ventasContado = Venta::query()->activas()->whereBetween('fecha_venta', [$inicio, $fin])->whereDoesntHave('credito')->with('detalles')->get();
             $ingresoContado = (float) $ventasContado->sum('total');
             $costoContado = (float) $ventasContado->sum(fn (Venta $venta) => $venta->detalles->sum(fn ($detalle) => (float) $detalle->cantidad * (float) $detalle->costo_unitario));
             $abonos = AbonoCredito::query()->whereBetween('fecha_abono', [$inicio->toDateString(), $fin->toDateString()])->with('credito.venta.detalles')->get();
@@ -81,6 +81,20 @@ class ReportesService
 
             return $reporte->load('detalleGastos.gasto');
         });
+    }
+
+    // Total vendido (precio de venta), costo (precio de compra) y diferencia de las ventas activas del rango
+    public function resumenPrecios(Carbon $inicio, Carbon $fin): array
+    {
+        $ventas = Venta::query()->activas()->whereBetween('fecha_venta', [$inicio->copy()->startOfDay(), $fin->copy()->endOfDay()]);
+        $totalVentas = round((float) (clone $ventas)->sum('total'), 2);
+        $costo = round((float) DB::table('detalle_venta')
+            ->join('ventas', 'detalle_venta.fk_venta', '=', 'ventas.id_venta')
+            ->where('ventas.anulado', false)
+            ->whereBetween('ventas.fecha_venta', [$inicio->copy()->startOfDay(), $fin->copy()->endOfDay()])
+            ->sum(DB::raw('detalle_venta.cantidad * detalle_venta.costo_unitario')), 2);
+
+        return ['total_ventas' => $totalVentas, 'costo_ventas' => $costo, 'diferencia' => round($totalVentas - $costo, 2)];
     }
 
     private function rango(string $tipo, Carbon $referencia): array

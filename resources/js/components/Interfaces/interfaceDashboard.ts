@@ -4,6 +4,8 @@ export interface DashboardData extends Record<string, unknown> {
         ventas_hoy_monto: number;
         ventas_mes_cantidad: number;
         ventas_mes_monto: number;
+        costo_ventas_mes: number;
+        diferencia_mes: number;
         ingresos_cobrados_mes: number;
         creditos_pendientes: number;
         creditos_vencidos: number;

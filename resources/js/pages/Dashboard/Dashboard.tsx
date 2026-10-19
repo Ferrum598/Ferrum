@@ -26,6 +26,8 @@ export default function Dashboard(props: DashboardData) {
                 <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
                     <StatCard title="Ventas de hoy" detail={`${number(stats.ventas_hoy_cantidad)} operaciones registradas`} value={money(stats.ventas_hoy_monto)} icon="🛍️" color="from-orange-500 to-amber-400" />
                     <StatCard title="Ventas del mes" detail={`${number(stats.ventas_mes_cantidad)} operaciones registradas`} value={money(stats.ventas_mes_monto)} icon="📈" color="from-blue-700 to-indigo-500" />
+                    <StatCard title="Costo de compra del mes" detail="Precio de compra de lo vendido" value={money(stats.costo_ventas_mes)} icon="🏷️" color="from-slate-700 to-slate-500" />
+                    <StatCard title="Diferencia del mes" detail="Ventas − costo de compra" value={money(stats.diferencia_mes)} icon="⚖️" color="from-cyan-600 to-sky-400" />
                     <StatCard title="Ingresos cobrados" detail="Contado + abonos de este mes" value={money(stats.ingresos_cobrados_mes)} icon="💰" color="from-emerald-600 to-teal-400" />
                     <StatCard title="Créditos pendientes" detail="Saldo por cobrar vigente" value={money(stats.creditos_pendientes)} icon="🧾" color="from-amber-500 to-yellow-400" />
                     <StatCard title="Créditos vencidos" detail="Saldo que requiere seguimiento" value={money(stats.creditos_vencidos)} icon="⏰" color="from-rose-600 to-red-400" />
