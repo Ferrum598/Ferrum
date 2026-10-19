@@ -32,14 +32,10 @@ class RolSeeder extends Seeder
             ['nombre_rol' => 'Administrador'],
             ['descripcion_rol' => 'Acceso total al sistema, reportes y gastos']
         );
-        $empleado = Rol::firstOrCreate(
-            ['nombre_rol' => 'Empleado'],
-            ['descripcion_rol' => 'Ventas, comprobantes, inventario, clientes y créditos']
-        );
 
         $admin->permisos()->syncWithoutDetaching(collect($permisos)->pluck('id_permisos')->all());
-        $empleado->permisos()->syncWithoutDetaching(
-            collect($permisos)->only(['ventas', 'comprobantes', 'inventario', 'codigos_barras', 'clientes', 'creditos'])->pluck('id_permisos')->all()
-        );
+        // $empleado->permisos()->syncWithoutDetaching(
+        //     collect($permisos)->only(['ventas', 'comprobantes', 'inventario', 'codigos_barras', 'clientes', 'creditos'])->pluck('id_permisos')->all()
+        // );
     }
 }
