@@ -13,10 +13,10 @@ class UsuarioSeeder extends Seeder
         $admin = Rol::where('nombre_rol', 'Administrador')->value('id_rol');
 
         Usuario::create([
-            'nombre' => 'Jostyn',
-            'apellido' => 'Perez',
-            'usuario' => 'JostynPerez123',
-            'password' => 'JostynPerez123',
+            'nombre' => 'Saul',
+            'apellido' => 'Lix',
+            'usuario' => 'SaulLix123',
+            'password' => 'SaulLix123',
             'fk_rol' => $admin,
         ]);
     
