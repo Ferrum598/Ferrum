@@ -51,6 +51,12 @@ function DetalleLotes({ data }: { data: ProductoInventario }) {
         <div className="w-full rounded-xl border border-slate-100 bg-white p-4 shadow-inner">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                 <h3 className="font-semibold text-slate-800">📦 Lotes de {data.nombre_producto}</h3>
+                <button
+                    className="cursor-pointer rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:from-blue-700 hover:to-indigo-700 active:scale-[0.98]"
+                    onClick={() => router.visit(`/inventario/${data.id_producto}/lotes/agregar`)}
+                >
+                    ＋ Agregar lote
+                </button>
             </div>
             <div className="overflow-x-auto">
                 <table className="min-w-full text-sm">
@@ -311,6 +317,13 @@ export default function Tabla({ productos, buscarInicial = '' }: TablaProps) {
                                                 <td className="px-4 py-3 text-slate-600">{p.lotes.length}</td>
                                                 <td className="px-4 py-3">
                                                     <div className="flex items-center justify-center gap-3">
+                                                        <button
+                                                            className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg bg-emerald-50 transition hover:scale-110 hover:bg-emerald-100"
+                                                            onClick={() => router.visit(`/inventario/${p.id_producto}/lotes/agregar`)}
+                                                            title="Agregar lote"
+                                                        >
+                                                            <span className="text-lg font-bold text-emerald-700">＋</span>
+                                                        </button>
                                                         <button
                                                             className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg transition hover:scale-110 hover:bg-blue-100"
                                                             onClick={() => router.visit(`/inventario/${p.id_producto}/editar`)}
