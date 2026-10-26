@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Comprobante;
+use App\Models\Categoria;
 use App\Models\Credito;
 use App\Models\DescuentoProducto;
 use App\Models\Lote;
@@ -20,7 +21,12 @@ class VentaController extends Controller
     // Pantalla del punto de venta
     public function index()
     {
-        return Inertia::render('Ventas/Ventas');
+        return Inertia::render('Ventas/Ventas', [
+            'categorias' => Categoria::query()
+                ->select('id_categoria', 'nombre_categoria')
+                ->orderBy('nombre_categoria')
+                ->get(),
+        ]);
     }
 
     private function formatearLote(Lote $lote): array
@@ -38,11 +44,15 @@ class VentaController extends Controller
     public function buscar(Request $request): JsonResponse
     {
         $q = trim((string) $request->query('q', ''));
+        $filtros = $request->validate([
+            'categoria' => ['nullable', 'integer', 'exists:categorias,id_categoria'],
+        ]);
 
         $paginado = \App\Models\Producto::query()
             ->where('activo', true)
             ->whereHas('lotesDisponibles')
             ->when($q !== '', fn($query) => $query->where('nombre_producto', 'like', "%{$q}%"))
+            ->when($filtros['categoria'] ?? null, fn($query, $categoria) => $query->where('fk_categoria', $categoria))
             ->with(['categoria:id_categoria,nombre_categoria', 'descuentos', 'lotesDisponibles' => fn($query) => $query->orderBy('fecha_ingreso')->orderBy('id_lote')])
             ->orderBy('nombre_producto')
             ->paginate(12)
