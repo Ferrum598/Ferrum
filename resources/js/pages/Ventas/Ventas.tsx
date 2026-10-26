@@ -4,6 +4,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Swal from "sweetalert2";
 import { ClienteVenta, DescuentoRegla, ItemCarrito, LoteVenta, ProductoVenta } from "@/components/Interfaces/interfaceCatalogo";
 
+interface CategoriaVenta {
+    id_categoria: number;
+    nombre_categoria: string;
+}
+
 const leerXsrf = () => {
     const m = document.cookie.match(/(?:^|; )XSRF-TOKEN=([^;]*)/);
     return m ? decodeURIComponent(m[1]) : '';
@@ -41,8 +46,9 @@ const manana = () => {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
 
-export default function Ventas() {
+export default function Ventas({ categorias }: { categorias: CategoriaVenta[] }) {
     const [buscar, setBuscar] = useState('');
+    const [categoria, setCategoria] = useState('');
     const [productos, setProductos] = useState<ProductoVenta[]>([]);
     const [cargando, setCargando] = useState(false);
     const [pagina, setPagina] = useState(1);
@@ -61,9 +67,9 @@ export default function Ventas() {
     const [ultimaVenta, setUltimaVenta] = useState<{ id_comprobante: number; numero_comprobante: string } | null>(null);
 
     // Búsqueda de productos con lotes
-    const cargarProductos = useCallback(async (q: string, p: number) => {
+    const cargarProductos = useCallback(async (q: string, categoriaSeleccionada: string, p: number) => {
         setCargando(true);
-        const r = await peticion(`/ventas/buscar?q=${encodeURIComponent(q)}&page=${p}`);
+        const r = await peticion(`/ventas/buscar?q=${encodeURIComponent(q)}&categoria=${encodeURIComponent(categoriaSeleccionada)}&page=${p}`);
         if (r.ok) {
             setProductos(r.data.data);
             setUltimaPagina(r.data.last_page);
@@ -71,12 +77,12 @@ export default function Ventas() {
         setCargando(false);
     }, []);
 
-    useEffect(() => { setPagina(1); }, [buscar]);
+    useEffect(() => { setPagina(1); }, [buscar, categoria]);
 
     useEffect(() => {
-        const t = setTimeout(() => cargarProductos(buscar, pagina), 250);
+        const t = setTimeout(() => cargarProductos(buscar, categoria, pagina), 250);
         return () => clearTimeout(t);
-    }, [buscar, pagina, cargarProductos]);
+    }, [buscar, categoria, pagina, cargarProductos]);
 
     // Búsqueda de clientes
     useEffect(() => {
@@ -220,7 +226,7 @@ export default function Ventas() {
             setTipoPago('contado');
             setFechaVencimiento('');
             setDescripcion('');
-            cargarProductos(buscar, pagina);
+            cargarProductos(buscar, categoria, pagina);
             Swal.fire({ title: 'Venta registrada', text: `Comprobante ${r.data.numero_comprobante}`, icon: 'success', timer: 1500, showConfirmButton: false });
         } else {
             Swal.fire({ icon: 'error', title: 'No se pudo registrar la venta', text: primerError(r.data) });
@@ -254,8 +260,21 @@ export default function Ventas() {
                                 placeholder="🔍 Buscar producto por nombre..."
                                 value={buscar}
                                 onChange={(e) => setBuscar(e.target.value)}
-                                className="w-full md:w-2/3 rounded-xl border border-slate-200 bg-slate-50 p-3 outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition"
+                                className="w-full md:flex-1 rounded-xl border border-slate-200 bg-slate-50 p-3 outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition"
                             />
+                            <select
+                                value={categoria}
+                                onChange={(e) => setCategoria(e.target.value)}
+                                aria-label="Filtrar por categoría"
+                                className="w-full md:w-1/3 rounded-xl border border-slate-200 bg-slate-50 p-3 outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition"
+                            >
+                                <option value="">Todas las categorías</option>
+                                {categorias.map((item) => (
+                                    <option key={item.id_categoria} value={item.id_categoria}>
+                                        {item.nombre_categoria}
+                                    </option>
+                                ))}
+                            </select>
                             <input
                                 type="text"
                                 data-codigo="manual"
