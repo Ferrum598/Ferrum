@@ -25,10 +25,11 @@ class ComprobanteController extends Controller
             ->with(['venta.cliente', 'venta.credito'])
             ->when($q !== '', function ($query) use ($q) {
                 $query->where(function ($w) use ($q) {
-                    $w->where('numero_comprobante', 'like', "%{$q}%")
-                        ->orWhereHas('venta.cliente', function ($c) use ($q) {
-                            $c->where('nombre_cliente', 'like', "%{$q}%")
-                                ->orWhere('apellido_cliente', 'like', "%{$q}%");
+                    $like = '%' . mb_strtolower($q) . '%';
+                    $w->whereRaw('LOWER(numero_comprobante) LIKE ?', [$like])
+                        ->orWhereHas('venta.cliente', function ($c) use ($like) {
+                            $c->whereRaw('LOWER(nombre_cliente) LIKE ?', [$like])
+                                ->orWhereRaw('LOWER(apellido_cliente) LIKE ?', [$like]);
                         });
                 });
             })
@@ -89,8 +90,7 @@ class ComprobanteController extends Controller
                 ] : null,
                 'detalles' => $venta->detalles->map(fn($d) => [
                     'id_detalle' => $d->id_detalle,
-                    'producto' => $d->lote?->producto?->nombre_producto,
-                    'lote' => $d->lote?->nombre_lote,
+                    'descripcion' => $d->lote?->producto?->descripcion,
                     'cantidad' => (int) $d->cantidad,
                     'precio_unitario' => (string) $d->precio_unitario,
                     'subtotal' => (string) $d->subtotal,

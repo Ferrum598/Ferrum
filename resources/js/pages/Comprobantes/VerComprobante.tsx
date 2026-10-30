@@ -58,7 +58,7 @@ export default function VerComprobante({ comprobante }: { comprobante: Comproban
                 <article className="bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden print:shadow-none print:border-0 print:rounded-none">
                     <header className="text-center bg-gradient-to-r from-slate-900 to-blue-800 text-white px-6 py-6 print:bg-none print:text-black print:border-b-2 print:border-black">
                         <h1 className="text-4xl font-extrabold tracking-wide">Ferrum</h1>
-                        <p className="text-blue-100 print:text-black uppercase tracking-widest text-sm mt-1">Comprobante de venta interno</p>
+                        <p className="text-blue-100 print:text-black uppercase tracking-widest text-sm mt-1">Comprobante de venta</p>
                         <p className="inline-block mt-3 rounded-full bg-white/15 print:bg-transparent print:border print:border-black px-4 py-1 text-xl font-bold">{comprobante.numero_comprobante}</p>
                     </header>
 
@@ -81,8 +81,7 @@ export default function VerComprobante({ comprobante }: { comprobante: Comproban
                         <table className="w-full text-left text-sm">
                             <thead className="bg-slate-100 text-slate-700 uppercase text-xs print:bg-transparent print:border-b-2 print:border-black">
                                 <tr>
-                                    <th className="p-2">Producto</th>
-                                    <th className="p-2">Lote</th>
+                                    <th className="p-2">Descripción</th>
                                     <th className="p-2 text-right">Cant.</th>
                                     <th className="p-2 text-right">Precio</th>
                                     <th className="p-2 text-right">Subtotal</th>
@@ -91,8 +90,7 @@ export default function VerComprobante({ comprobante }: { comprobante: Comproban
                             <tbody className="divide-y divide-slate-100">
                                 {comprobante.detalles.map((d) => (
                                     <tr key={d.id_detalle}>
-                                        <td className="p-2 font-medium text-slate-800">{d.producto}</td>
-                                        <td className="p-2 text-slate-600">{d.lote}</td>
+                                        <td className="p-2 font-medium text-slate-800">{d.descripcion || '—'}</td>
                                         <td className="p-2 text-right">{d.cantidad}</td>
                                         <td className="p-2 text-right">Q{Number(d.precio_unitario).toFixed(2)}</td>
                                         <td className="p-2 text-right font-semibold">Q{Number(d.subtotal).toFixed(2)}{d.descuento_porcentaje > 0 && <div className="text-xs font-normal text-emerald-700 print:text-black">Desc. {d.descuento_porcentaje}% (-Q{Number(d.descuento_monto).toFixed(2)})</div>}</td>

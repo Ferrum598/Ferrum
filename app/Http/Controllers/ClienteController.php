@@ -18,10 +18,11 @@ class ClienteController extends Controller
             ->withSum(['creditos as deuda_total' => fn ($query) => $query->where('estado', '!=', 'pagado')], 'saldo_pendiente')
             ->when($request->filled('q'), function ($query) use ($request) {
                 $term = trim($request->string('q')->toString());
-                $query->where(function ($query) use ($term) {
-                    $query->where('nombre_cliente', 'like', "%{$term}%")
-                        ->orWhere('apellido_cliente', 'like', "%{$term}%")
-                        ->orWhere('numero_cliente', 'like', "%{$term}%");
+                $like = '%' . mb_strtolower($term) . '%';
+                $query->where(function ($query) use ($like) {
+                    $query->whereRaw('LOWER(nombre_cliente) LIKE ?', [$like])
+                        ->orWhereRaw('LOWER(apellido_cliente) LIKE ?', [$like])
+                        ->orWhereRaw('LOWER(numero_cliente) LIKE ?', [$like]);
                 });
             })
             ->orderBy('nombre_cliente')->orderBy('apellido_cliente')
@@ -43,9 +44,10 @@ class ClienteController extends Controller
         return Cliente::query()
             ->withSum(['creditos as deuda_total' => fn ($query) => $query->where('estado', '!=', 'pagado')], 'saldo_pendiente')
             ->where(function ($query) use ($term) {
-                $query->where('nombre_cliente', 'like', "%{$term}%")
-                    ->orWhere('apellido_cliente', 'like', "%{$term}%")
-                    ->orWhere('numero_cliente', 'like', "%{$term}%");
+                $like = '%' . mb_strtolower($term) . '%';
+                $query->whereRaw('LOWER(nombre_cliente) LIKE ?', [$like])
+                    ->orWhereRaw('LOWER(apellido_cliente) LIKE ?', [$like])
+                    ->orWhereRaw('LOWER(numero_cliente) LIKE ?', [$like]);
             })
             ->orderBy('nombre_cliente')->limit(15)
             ->get(['id_cliente', 'nombre_cliente', 'apellido_cliente', 'numero_cliente'])
