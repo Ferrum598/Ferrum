@@ -101,6 +101,10 @@ class InventarioController extends Controller
         return Inertia::render('Inventario/Inventario', [
             'productos' => $productos,
             'buscar' => $buscar,
+            'totalCompra' => (float) Lote::where('activo', true)
+                ->whereHas('producto', fn ($q) => $q->where('activo', true))
+                ->selectRaw('COALESCE(SUM(precio_compra * cantidad_disponible), 0) as total')
+                ->value('total'),
         ]);
     }
 
