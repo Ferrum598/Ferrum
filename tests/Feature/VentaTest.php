@@ -162,3 +162,15 @@ test('el catalogo se pagina y la imagen se sirve como archivo', function () {
 
     $this->get("/ventas/imagen/{$prod->id_producto}")->assertOk()->assertHeader('Content-Type', 'image/png');
 });
+
+test('el catalogo busca por descripcion y no por nombre', function () {
+    $this->lote->producto->update(['descripcion' => 'Herramienta para clavar']);
+
+    $this->getJson('/ventas/buscar?q=clavar')
+        ->assertOk()
+        ->assertJsonPath('data.0.nombre_producto', 'Martillo');
+
+    $this->getJson('/ventas/buscar?q=Martillo')
+        ->assertOk()
+        ->assertJsonPath('data', []);
+});

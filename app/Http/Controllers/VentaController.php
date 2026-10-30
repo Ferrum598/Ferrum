@@ -51,7 +51,7 @@ class VentaController extends Controller
         $paginado = \App\Models\Producto::query()
             ->where('activo', true)
             ->whereHas('lotesDisponibles')
-            ->when($q !== '', fn($query) => $query->where('nombre_producto', 'like', "%{$q}%"))
+            ->when($q !== '', fn($query) => $query->whereRaw('LOWER(descripcion) LIKE ?', ['%' . mb_strtolower($q) . '%']))
             ->when($filtros['categoria'] ?? null, fn($query, $categoria) => $query->where('fk_categoria', $categoria))
             ->with(['categoria:id_categoria,nombre_categoria', 'descuentos', 'lotesDisponibles' => fn($query) => $query->orderBy('fecha_ingreso')->orderBy('id_lote')])
             ->orderBy('nombre_producto')
@@ -59,6 +59,7 @@ class VentaController extends Controller
             ->through(fn($p) => [
                 'id_producto' => $p->id_producto,
                 'nombre_producto' => $p->nombre_producto,
+                'descripcion' => $p->descripcion,
                 'categoria' => $p->categoria?->nombre_categoria,
                 'imagen' => $p->fk_imagen_producto
                     ? route('ventas.imagen', $p->id_producto) . '?v=' . $p->fk_imagen_producto
@@ -251,8 +252,9 @@ class VentaController extends Controller
             ->when($filtros['hasta'] ?? null, fn($q, $v) => $q->whereDate('fecha_venta', '<=', $v))
             ->when($filtros['cliente'] ?? null, function ($q, $v) {
                 $q->whereHas('cliente', function ($c) use ($v) {
-                    $c->where('nombre_cliente', 'like', "%{$v}%")
-                        ->orWhere('apellido_cliente', 'like', "%{$v}%");
+                    $like = '%' . mb_strtolower(trim($v)) . '%';
+                    $c->whereRaw('LOWER(nombre_cliente) LIKE ?', [$like])
+                        ->orWhereRaw('LOWER(apellido_cliente) LIKE ?', [$like]);
                 });
             })
             ->when(($filtros['tipo'] ?? null) === 'credito', fn($q) => $q->whereHas('credito'))

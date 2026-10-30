@@ -15,6 +15,7 @@ export interface ProductoVenta {
     id_producto: number;
     descuentos?: DescuentoRegla[];
     nombre_producto: string;
+    descripcion?: string | null;
     categoria?: string | null;
     imagen?: string;
     lotes: LoteVenta[];
@@ -81,5 +82,5 @@ export interface ComprobanteDetalle {
     cliente: { nombre: string; numero: string | null } | null;
     tipo_pago: 'contado' | 'credito';
     credito: { fecha_vencimiento: string; saldo_pendiente: string; estado: string } | null;
-    detalles: { id_detalle: number; producto: string | null; lote: string | null; cantidad: number; precio_unitario: string; subtotal: string; descuento_porcentaje: number; descuento_monto: string }[];
+    detalles: { id_detalle: number; descripcion: string | null; cantidad: number; precio_unitario: string; subtotal: string; descuento_porcentaje: number; descuento_monto: string }[];
 }

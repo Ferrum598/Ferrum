@@ -257,7 +257,7 @@ export default function Ventas({ categorias }: { categorias: CategoriaVenta[] })
                         <div className="flex flex-col md:flex-row gap-3 bg-white shadow-md border border-slate-100 p-3 rounded-2xl">
                             <input
                                 type="text"
-                                placeholder="🔍 Buscar producto por nombre..."
+                                placeholder="🔍 Buscar producto por descripción..."
                                 value={buscar}
                                 onChange={(e) => setBuscar(e.target.value)}
                                 className="w-full md:flex-1 rounded-xl border border-slate-200 bg-slate-50 p-3 outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition"
@@ -312,14 +312,15 @@ export default function Ventas({ categorias }: { categorias: CategoriaVenta[] })
                                         )}
                                     </div>
                                     <div className="p-4 flex-1 flex flex-col">
-                                        <h2 className="font-bold text-lg text-slate-900 mb-3 leading-tight">{p.nombre_producto}</h2>
+                                        <h2 className="font-bold text-lg text-slate-900 leading-tight">{p.nombre_producto}</h2>
+                                        {p.descripcion && <p className="mt-1 mb-3 text-sm leading-relaxed text-slate-600">{p.descripcion}</p>}
                                         {!!p.descuentos?.length && <div className="mb-3 flex flex-wrap gap-1">{p.descuentos.map((d) => <span key={d.cantidad_minima} className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-bold text-emerald-700">🏷️ {d.cantidad_minima}+ u: -{Number(d.porcentaje)}%</span>)}</div>}
                                         <ul className="space-y-2 mt-auto max-h-48 overflow-y-auto pr-1">
                                             {p.lotes.map((l) => (
                                                 <li key={l.id_lote} className="flex items-center justify-between gap-2 rounded-xl bg-slate-50 border border-slate-200 p-2 pl-3">
                                                     <div className="text-sm">
                                                         <div className="font-extrabold text-blue-700 text-base">{dinero(Number(l.precio_venta))}</div>
-                                                        <div className="text-slate-500 text-xs">{l.nombre_lote} · {l.cantidad_disponible} disp.{l.fecha_ingreso ? ` · ${l.fecha_ingreso}` : ''}</div>
+                                                        <div className="text-slate-500 text-xs">{l.cantidad_disponible} disponibles</div>
                                                     </div>
                                                     <button
                                                         onClick={() => agregarAlCarrito(p.nombre_producto, l, p.id_producto, p.descuentos ?? [])}

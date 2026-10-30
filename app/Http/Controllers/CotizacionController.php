@@ -18,7 +18,8 @@ class CotizacionController extends Controller
         $cotizaciones = Cotizacion::query()
             ->with('cliente:id_cliente,nombre_cliente,apellido_cliente')
             ->when($q !== '', fn($query) => $query->where(function ($w) use ($q) {
-                $w->where('numero_cotizacion', 'like', "%{$q}%")->orWhere('nombre_cliente', 'like', "%{$q}%");
+                $like = '%' . mb_strtolower($q) . '%';
+                $w->whereRaw('LOWER(numero_cotizacion) LIKE ?', [$like])->orWhereRaw('LOWER(nombre_cliente) LIKE ?', [$like]);
             }))
             ->orderByDesc('id_cotizacion')
             ->paginate(15)
@@ -51,7 +52,7 @@ class CotizacionController extends Controller
         }
 
         $productos = Producto::where('activo', true)
-            ->where('nombre_producto', 'like', "%{$q}%")
+            ->whereRaw('LOWER(nombre_producto) LIKE ?', ['%' . mb_strtolower($q) . '%'])
             ->whereHas('lotesDisponibles')
             ->with('lotesDisponibles')
             ->orderBy('nombre_producto')

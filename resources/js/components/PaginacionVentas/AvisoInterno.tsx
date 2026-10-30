@@ -1,10 +1,9 @@
-export const AVISO_INTERNO = 'COMPROBANTE DE VENTA INTERNO — NO ES UN DOCUMENTO FISCAL. No es factura ni sustituye una factura (SAT).';
+export const AVISO_INTERNO = 'Comprobante de venta interno — no es un documento fiscal. No es factura ni sustituye una factura (SAT).';
 
 export function AvisoInterno({ className = '' }: { className?: string }) {
     return (
-        <div className={`flex items-start gap-3 rounded-xl border-2 border-amber-400 bg-amber-50 px-4 py-3 text-amber-900 ${className}`}>
-            <span className="text-2xl leading-none" aria-hidden>⚠️</span>
-            <p className="text-sm font-bold uppercase tracking-wide">{AVISO_INTERNO}</p>
+        <div className={`rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-slate-600 ${className}`}>
+            <p className="text-[11px] leading-relaxed">{AVISO_INTERNO}</p>
         </div>
     );
 }
