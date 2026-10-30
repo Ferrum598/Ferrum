@@ -6,6 +6,7 @@ import Swal from 'sweetalert2';
 interface TablaProps {
     productos?: PaginadoInventario<ProductoInventario>;
     buscarInicial?: string;
+    totalCompra?: number;
 }
 
 const moneda = (valor: number) => Number(valor).toLocaleString('es-US', { style: 'currency', currency: 'GTQ' });
@@ -154,7 +155,7 @@ function DetalleLotes({ data }: { data: ProductoInventario }) {
     );
 }
 
-export default function Tabla({ productos, buscarInicial = '' }: TablaProps) {
+export default function Tabla({ productos, buscarInicial = '', totalCompra = 0 }: TablaProps) {
     const [buscar, setBuscar] = useState(buscarInicial);
     const [abiertos, setAbiertos] = useState<number[]>([]);
     // La selección se conserva al cambiar de página o de búsqueda
@@ -222,10 +223,14 @@ export default function Tabla({ productos, buscarInicial = '' }: TablaProps) {
 
     return (
         <div className="w-full space-y-5">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <div className="rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 p-5 text-white shadow-lg">
                     <p className="text-sm opacity-80">📦 Productos activos</p>
                     <p className="text-3xl font-extrabold">{productos?.total ?? 0}</p>
+                </div>
+                <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-5 shadow-md">
+                    <p className="text-sm text-emerald-700">💰 Total de compra de los productos</p>
+                    <p className="text-3xl font-extrabold text-emerald-700">{moneda(totalCompra)}</p>
                 </div>
                 <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-md">
                     <p className="text-sm text-slate-500">🧱 Existencias en esta página</p>

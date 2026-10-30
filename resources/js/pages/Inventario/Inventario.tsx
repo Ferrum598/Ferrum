@@ -4,7 +4,7 @@ import useFlashSwal from '@/components/FlashSwal/useFlashSwal';
 import { Link, Head } from '@inertiajs/react';
 import { PaginadoInventario, ProductoInventario } from '@/components/Interfaces/interfaceInventario';
 
-export default function Inventario({ productos, buscar = '' }: { productos?: PaginadoInventario<ProductoInventario>; buscar?: string }) {
+export default function Inventario({ productos, buscar = '', totalCompra = 0 }: { productos?: PaginadoInventario<ProductoInventario>; buscar?: string; totalCompra?: number }) {
     useFlashSwal();
 
     return (
@@ -25,7 +25,7 @@ export default function Inventario({ productos, buscar = '' }: { productos?: Pag
                             + Agregar un Producto
                         </Link>
                     </div>
-                    <Tabla productos={productos} buscarInicial={buscar} />
+                    <Tabla productos={productos} buscarInicial={buscar} totalCompra={totalCompra} />
                 </div>
             </SistemaLayout>
         </>
