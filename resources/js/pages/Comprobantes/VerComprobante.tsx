@@ -1,5 +1,5 @@
 import SistemaLayout from "@/layouts/SistemaLayout/SistemaLayout";
-import { AvisoInterno, BadgeTipoPago } from "@/components/PaginacionVentas/AvisoInterno";
+import { AVISO_INTERNO, BadgeTipoPago } from "@/components/PaginacionVentas/AvisoInterno";
 import { ComprobanteDetalle } from "@/components/Interfaces/interfaceCatalogo";
 import { Head, Link, router, usePage } from "@inertiajs/react";
 import { useEffect, useState } from "react";
@@ -58,13 +58,12 @@ export default function VerComprobante({ comprobante }: { comprobante: Comproban
                 <article className="bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden print:shadow-none print:border-0 print:rounded-none">
                     <header className="text-center bg-gradient-to-r from-slate-900 to-blue-800 text-white px-6 py-6 print:bg-none print:text-black print:border-b-2 print:border-black">
                         <h1 className="text-4xl font-extrabold tracking-wide">Ferrum</h1>
+                        <p className="text-blue-100 print:text-black text-sm mt-1">2da. Calle 2-59 Z.2</p>
                         <p className="text-blue-100 print:text-black uppercase tracking-widest text-sm mt-1">Comprobante de venta</p>
                         <p className="inline-block mt-3 rounded-full bg-white/15 print:bg-transparent print:border print:border-black px-4 py-1 text-xl font-bold">{comprobante.numero_comprobante}</p>
                     </header>
 
                     <div className="p-6 space-y-5">
-                        <AvisoInterno />
-
                         {comprobante.anulado && (
                             <div className="rounded-xl border border-rose-300 bg-rose-50 p-4 text-center font-bold text-rose-800">
                                 COMPROBANTE DESACTIVADO{comprobante.fecha_anulacion ? ` el ${comprobante.fecha_anulacion}` : ''}. No tiene valor en ventas ni inventario.
@@ -113,6 +112,7 @@ export default function VerComprobante({ comprobante }: { comprobante: Comproban
                         )}
 
                         <p className="text-center text-slate-500 text-sm pt-2">¡Gracias por su compra!</p>
+                        <p className="text-right text-[10px] leading-snug text-slate-500 max-w-xs ml-auto">{AVISO_INTERNO}</p>
                     </div>
                 </article>
             </div>

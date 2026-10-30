@@ -1,4 +1,4 @@
-export const AVISO_INTERNO = 'Comprobante de venta interno — no es un documento fiscal. No es factura ni sustituye una factura (SAT).';
+export const AVISO_INTERNO = 'Comprobante de venta — no es un documento fiscal. No es factura ni sustituye una factura.';
 
 export function AvisoInterno({ className = '' }: { className?: string }) {
     return (
