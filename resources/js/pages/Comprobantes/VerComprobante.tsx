@@ -59,6 +59,7 @@ export default function VerComprobante({ comprobante }: { comprobante: Comproban
                     <header className="text-center bg-gradient-to-r from-slate-900 to-blue-800 text-white px-6 py-6 print:bg-none print:text-black print:border-b-2 print:border-black">
                         <h1 className="text-4xl font-extrabold tracking-wide">Ferrum</h1>
                         <p className="text-blue-100 print:text-black text-sm mt-1">2da. Calle 2-59 Z.2</p>
+                        <p className="text-blue-100 print:text-black text-sm mt-1">Tel: 7791-8720</p>
                         <p className="text-blue-100 print:text-black uppercase tracking-widest text-sm mt-1">Comprobante de venta</p>
                         <p className="inline-block mt-3 rounded-full bg-white/15 print:bg-transparent print:border print:border-black px-4 py-1 text-xl font-bold">{comprobante.numero_comprobante}</p>
                     </header>
@@ -70,36 +71,60 @@ export default function VerComprobante({ comprobante }: { comprobante: Comproban
                             </div>
                         )}
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm bg-slate-50 rounded-xl p-4 print:bg-transparent print:border">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm bg-slate-50 rounded-xl p-1 print:bg-transparent print:border">
                             <p><b className="text-slate-500">Fecha:</b> {comprobante.fecha_emision}</p>
-                            <p><b className="text-slate-500">Vendedor:</b> {comprobante.vendedor ?? '-'}</p>
+                            <p><b className="text-slate-500">Atendido por:</b> {comprobante.vendedor ?? '-'}</p>
                             <p><b className="text-slate-500">Cliente:</b> {comprobante.cliente?.nombre ?? 'Público general'}</p>
-                            <p className="flex items-center gap-2"><b className="text-slate-500">Tipo de pago:</b> <BadgeTipoPago tipo={comprobante.tipo_pago} /></p>
                         </div>
 
-                        <table className="w-full text-left text-sm">
+                        <table className="w-full table-fixed text-left text-xs print:text-[10px]">
+                            <colgroup>
+                                <col className="w-[40%]" />
+                                <col className="w-[12%]" />
+                                <col className="w-[21%]" />
+                                <col className="w-[27%]" />
+                            </colgroup>
+
                             <thead className="bg-slate-100 text-slate-700 uppercase text-xs print:bg-transparent print:border-b-2 print:border-black">
                                 <tr>
-                                    <th className="p-2">Descripción</th>
-                                    <th className="p-2 text-right">Cant.</th>
-                                    <th className="p-2 text-right">Precio</th>
-                                    <th className="p-2 text-right">Subtotal</th>
+                                    <th className="p-1 text-left">Descripción</th>
+                                    <th className="p-1 text-right">Cant.</th>
+                                    <th className="p-1 text-right">Precio</th>
+                                    <th className="p-1 text-right">Subtotal</th>
                                 </tr>
                             </thead>
+
                             <tbody className="divide-y divide-slate-100">
                                 {comprobante.detalles.map((d) => (
                                     <tr key={d.id_detalle}>
-                                        <td className="p-2 font-medium text-slate-800">{d.descripcion || '—'}</td>
-                                        <td className="p-2 text-right">{d.cantidad}</td>
-                                        <td className="p-2 text-right">Q{Number(d.precio_unitario).toFixed(2)}</td>
-                                        <td className="p-2 text-right font-semibold">Q{Number(d.subtotal).toFixed(2)}{d.descuento_porcentaje > 0 && <div className="text-xs font-normal text-emerald-700 print:text-black">Desc. {d.descuento_porcentaje}% (-Q{Number(d.descuento_monto).toFixed(2)})</div>}</td>
+                                        <td className="p-1 font-medium text-slate-800 break-words">
+                                            {d.descripcion || '—'}
+                                        </td>
+
+                                        <td className="p-1 text-right whitespace-nowrap">
+                                            {d.cantidad}
+                                        </td>
+
+                                        <td className="p-1 text-right whitespace-nowrap">
+                                            Q{Number(d.precio_unitario).toFixed(2)}
+                                        </td>
+
+                                        <td className="p-1 text-right font-semibold break-words">
+                                            Q{Number(d.subtotal).toFixed(2)}
+
+                                            {d.descuento_porcentaje > 0 && (
+                                                <div className="text-[9px] font-normal text-emerald-700 print:text-black break-words">
+                                                    Desc. {d.descuento_porcentaje}% (-Q{Number(d.descuento_monto).toFixed(2)})
+                                                </div>
+                                            )}
+                                        </td>
                                     </tr>
                                 ))}
                             </tbody>
                         </table>
-
                         <div className="flex justify-end">
-                            <div className="rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-3 text-2xl font-extrabold shadow print:bg-none print:text-black print:border-2 print:border-black print:shadow-none">
+                            <div className="rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-2 py-2 text-sm font-extrabold shadow print:bg-none print:text-black print:border-2 print:border-black print:shadow-none">
+                                <p className="flex items-center gap-2"><b className="text-slate-500">Forma de Pago:</b> <BadgeTipoPago tipo={comprobante.tipo_pago} /></p>
                                 Total: Q{Number(comprobante.total).toFixed(2)}
                             </div>
                         </div>
