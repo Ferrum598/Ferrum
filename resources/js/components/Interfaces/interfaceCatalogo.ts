@@ -76,6 +76,8 @@ export interface ComprobanteDetalle {
     numero_comprobante: string;
     fecha_emision: string;
     total: string;
+    monto_recibido: string | null;
+    cambio: string | null;
     veces_impreso: number;
     anulado: boolean;
     fecha_anulacion: string | null;

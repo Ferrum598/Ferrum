@@ -32,10 +32,17 @@ beforeEach(function () {
 
 function venderPayload(array $extra = []): array
 {
-    return array_merge([
+    $payload = array_merge([
         'items' => [['id_lote' => test()->lote->id_lote, 'cantidad' => 2]],
         'tipo_pago' => 'contado',
     ], $extra);
+    if ($payload['tipo_pago'] === 'contado' && !array_key_exists('monto_recibido', $payload)) {
+        $payload['monto_recibido'] = collect($payload['items'])->sum(
+            fn ($item) => (float) Lote::find($item['id_lote'])->precio_venta * $item['cantidad']
+        );
+    }
+
+    return $payload;
 }
 
 test('venta de contado descuenta stock y crea comprobante', function () {

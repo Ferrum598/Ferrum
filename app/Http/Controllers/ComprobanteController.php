@@ -74,6 +74,8 @@ class ComprobanteController extends Controller
                 'numero_comprobante' => $c->numero_comprobante,
                 'fecha_emision' => $c->fecha_emision?->format('Y-m-d H:i'),
                 'total' => (string) $c->total,
+                'monto_recibido' => $c->monto_recibido,
+                'cambio' => $c->cambio,
                 'veces_impreso' => (int) $c->veces_impreso,
                 'anulado' => (bool) $c->anulado,
                 'fecha_anulacion' => $c->fecha_anulacion?->format('Y-m-d H:i'),

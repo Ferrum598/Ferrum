@@ -33,12 +33,22 @@ export default function ImprimirInventario() {
     return (
         <SistemaLayout>
             <Head title="Imprimir inventario" />
-            <div className="mx-auto w-full max-w-4xl space-y-4 px-4 py-8 print:max-w-none print:p-0">
+            <style>{`@page { size: A4 portrait; margin: 12mm; }
+                @media print {
+                    html, body, #app { height: auto !important; min-height: 0 !important; overflow: visible !important; background: #fff !important; }
+                    #app > div:has(.inventory-print-root) { display: block !important; height: auto !important; min-height: 0 !important; overflow: visible !important; }
+                    main:has(.inventory-print-root) { display: block !important; height: auto !important; overflow: visible !important; margin: 0 !important; padding: 0 !important; }
+                    .inventory-print-root, .inventory-print-card { display: block !important; width: 100% !important; max-width: none !important; height: auto !important; max-height: none !important; overflow: visible !important; margin: 0 !important; padding: 0 !important; border: 0 !important; border-radius: 0 !important; box-shadow: none !important; }
+                    .inventory-print-root table { width: 100% !important; border-collapse: collapse !important; }
+                    .inventory-print-root thead { display: table-header-group; }
+                    .inventory-print-root tr { break-inside: avoid; page-break-inside: avoid; }
+                }`}</style>
+            <div className="inventory-print-root mx-auto w-full max-w-4xl space-y-4 px-4 py-8 print:max-w-none print:p-0">
                 <div className="flex justify-between gap-3 print:hidden">
                     <Link href="/inventario" className="rounded-xl border border-slate-200 bg-white px-5 py-3 font-bold text-slate-600 transition hover:bg-slate-50">← Volver</Link>
                     <button onClick={() => window.print()} disabled={!filas?.length} className="rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-3 font-bold text-white shadow-md transition hover:-translate-y-0.5 hover:shadow-lg disabled:opacity-50">🖨️ Imprimir</button>
                 </div>
-                <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-md md:p-8 print:border-0 print:shadow-none">
+                <div className="inventory-print-card rounded-3xl border border-slate-100 bg-white p-6 shadow-md md:p-8 print:border-0 print:shadow-none">
                     <div className="mb-5 flex flex-wrap items-end justify-between gap-2 border-b border-slate-100 pb-4">
                         <h1 className="bg-gradient-to-r from-slate-900 to-blue-700 bg-clip-text text-2xl font-extrabold text-transparent">📦 Inventario</h1>
                         <p className="text-sm text-slate-500">{new Date().toLocaleDateString('es-GT')} · {filas?.length ?? 0} productos</p>

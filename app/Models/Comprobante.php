@@ -9,9 +9,9 @@ class Comprobante extends Model
     protected $table = 'comprobantes';
     protected $primaryKey = 'id_comprobante';
 
-    protected $fillable = ['fk_venta', 'fk_usuario', 'numero_comprobante', 'fecha_emision', 'total', 'veces_impreso', 'anulado', 'fecha_anulacion', 'fk_usuario_anulacion'];
+    protected $fillable = ['fk_venta', 'fk_usuario', 'numero_comprobante', 'fecha_emision', 'total', 'monto_recibido', 'cambio', 'veces_impreso', 'anulado', 'fecha_anulacion', 'fk_usuario_anulacion'];
 
-    protected $casts = ['fecha_emision' => 'datetime', 'anulado' => 'boolean', 'fecha_anulacion' => 'datetime'];
+    protected $casts = ['fecha_emision' => 'datetime', 'monto_recibido' => 'decimal:2', 'cambio' => 'decimal:2', 'anulado' => 'boolean', 'fecha_anulacion' => 'datetime'];
 
     public function venta()
     {
