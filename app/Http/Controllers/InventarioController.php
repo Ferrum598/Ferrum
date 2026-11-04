@@ -74,6 +74,7 @@ class InventarioController extends Controller
             $like = '%' . mb_strtolower($buscar) . '%';
             $query->where(function ($q) use ($like) {
                 $q->whereRaw('LOWER(nombre_producto) LIKE ?', [$like])
+                    ->orWhereRaw('LOWER(descripcion) LIKE ?', [$like])
                     ->orWhereHas('lotes.codigos', fn ($c) => $c->whereRaw('LOWER(codigo) LIKE ?', [$like]));
             });
         }
@@ -121,6 +122,7 @@ class InventarioController extends Controller
             $like = '%' . mb_strtolower($buscar) . '%';
             $query->where(function ($q) use ($like) {
                 $q->whereRaw('LOWER(nombre_producto) LIKE ?', [$like])
+                    ->orWhereRaw('LOWER(descripcion) LIKE ?', [$like])
                     ->orWhereHas('lotes.codigos', fn ($c) => $c->whereRaw('LOWER(codigo) LIKE ?', [$like]));
             });
         }
@@ -146,6 +148,7 @@ class InventarioController extends Controller
             ->map(fn (Producto $p) => [
                 'id_producto' => $p->id_producto,
                 'nombre_producto' => $p->nombre_producto,
+                'descripcion' => $p->descripcion,
                 'categoria' => $p->categoria?->nombre_categoria,
                 'existencias' => Cantidad::normalizar($p->lotes->sum('cantidad_disponible')),
                 'precio_min' => $p->lotes->isNotEmpty() ? (float) $p->lotes->min('precio_venta') : null,

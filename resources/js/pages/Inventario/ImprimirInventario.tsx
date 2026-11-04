@@ -2,7 +2,7 @@ import SistemaLayout from '@/layouts/SistemaLayout/SistemaLayout';
 import { Head, Link } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 
-type Fila = { id_producto: number; nombre_producto: string; categoria: string | null; existencias: number; precio_min: number | null; precio_max: number | null };
+type Fila = { id_producto: number; nombre_producto: string; descripcion: string | null; categoria: string | null; existencias: number; precio_min: number | null; precio_max: number | null };
 
 const moneda = (v: number) => Number(v).toLocaleString('es-US', { style: 'currency', currency: 'GTQ' });
 const leerXsrf = () => {
@@ -54,7 +54,7 @@ export default function ImprimirInventario() {
                             <tbody>
                                 {filas.map((f) => (
                                     <tr key={f.id_producto} className="border-b border-slate-100 break-inside-avoid">
-                                        <td className="p-3 font-semibold text-slate-800">{f.nombre_producto}</td>
+                                        <td className="p-3 font-semibold text-slate-800">{f.descripcion?.trim() || f.nombre_producto}</td>
                                         <td className="p-3 text-slate-600">{f.categoria ?? '—'}</td>
                                         <td className="p-3 font-bold text-slate-800">{f.existencias}</td>
                                         <td className="p-3 text-slate-800">{precio(f)}</td>
