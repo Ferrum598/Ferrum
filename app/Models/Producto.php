@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Casts\Cantidad;
 use Illuminate\Database\Eloquent\Model;
 
 class Producto extends Model
@@ -46,8 +47,8 @@ class Producto extends Model
     }
 
     // Existencias totales = suma de lo disponible en los lotes activos
-    public function existencias(): int
+    public function existencias(): int|float
     {
-        return (int) $this->lotes()->where('activo', true)->sum('cantidad_disponible');
+        return Cantidad::normalizar($this->lotes()->where('activo', true)->sum('cantidad_disponible'));
     }
 }

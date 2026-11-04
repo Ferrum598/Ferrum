@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Casts\Cantidad;
 use App\Models\AbonoCredito;
 use App\Models\Credito;
 use App\Models\DetalleVenta;
@@ -75,7 +76,7 @@ class DashboardController extends Controller
                         $pendiente->where('estado', 'pendiente')->whereDate('fecha_vencimiento', '<', today());
                     });
                 })->sum('saldo_pendiente'),
-                'stock_bajo_unidades' => (int) $stockBajo->sum('cantidad_disponible'),
+                'stock_bajo_unidades' => Cantidad::normalizar($stockBajo->sum('cantidad_disponible')),
             ],
             'productos_mas_vendidos' => $productosMasVendidos,
             'productos_stock_bajo' => $stockBajo->take(10)->values(),

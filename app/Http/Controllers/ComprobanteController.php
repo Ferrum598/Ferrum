@@ -91,7 +91,7 @@ class ComprobanteController extends Controller
                 'detalles' => $venta->detalles->map(fn($d) => [
                     'id_detalle' => $d->id_detalle,
                     'descripcion' => $d->lote?->producto?->descripcion,
-                    'cantidad' => (int) $d->cantidad,
+                    'cantidad' => $d->cantidad,
                     'precio_unitario' => (string) $d->precio_unitario,
                     'subtotal' => (string) $d->subtotal,
                     'descuento_porcentaje' => (float) $d->descuento_porcentaje,
@@ -131,7 +131,7 @@ class ComprobanteController extends Controller
                     $lote = Lote::whereKey($idLote)->lockForUpdate()->first();
                     if ($lote) {
                         $lote->update([
-                            'cantidad_disponible' => $lote->cantidad_disponible + $detalles->sum('cantidad'),
+                            'cantidad_disponible' => round($lote->cantidad_disponible + $detalles->sum('cantidad'), 2),
                             'activo' => true,
                         ]);
                     }

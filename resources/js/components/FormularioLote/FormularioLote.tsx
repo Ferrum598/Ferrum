@@ -56,7 +56,7 @@ export default function FormularioLote({ idProducto, nombreProducto, lote }: { i
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                     {lote
-                        ? campo('cantidad_disponible', `Disponible (de ${lote.cantidad} ingresadas)`, { type: 'number', min: 0, step: 1 })
+                        ? campo('cantidad_disponible', `Disponible (de ${lote.cantidad} ingresadas)`, { type: 'number', min: 0, step: 0.01 })
                         : campo('cantidad', 'Cantidad', { type: 'number', min: 0, step: 1 })}
                     {campo('fecha_ingreso', 'Fecha de Ingreso', { type: 'date' })}
                 </div>

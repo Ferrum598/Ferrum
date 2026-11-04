@@ -3,6 +3,7 @@ import { Head, Link } from "@inertiajs/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Swal from "sweetalert2";
 import { ClienteVenta, DescuentoRegla, ItemCarrito, LoteVenta, ProductoVenta } from "@/components/Interfaces/interfaceCatalogo";
+import VentaPorMedida from "@/components/VentaPorMedida/VentaPorMedida";
 
 interface CategoriaVenta {
     id_categoria: number;
@@ -94,34 +95,46 @@ export default function Ventas({ categorias }: { categorias: CategoriaVenta[] })
         return () => clearTimeout(t);
     }, [buscarCliente, cliente]);
 
-    const agregarAlCarrito = useCallback((producto: string, lote: LoteVenta, id_producto: number, descuentos: DescuentoRegla[] = []) => {
-        setCarrito((actual) => {
-            const i = actual.findIndex((it) => it.id_lote === lote.id_lote);
-            if (i === -1) {
-                return [...actual, {
-                    id_producto,
-                    descuentos,
-                    id_lote: lote.id_lote,
-                    producto,
-                    nombre_lote: lote.nombre_lote,
-                    precio_venta: Number(lote.precio_venta),
-                    cantidad_disponible: lote.cantidad_disponible,
-                    cantidad: 1,
-                }];
-            }
-            if (actual[i].cantidad >= actual[i].cantidad_disponible) {
+    const agregarAlCarrito = useCallback((producto: string, lote: LoteVenta, id_producto: number, descuentos: DescuentoRegla[] = [], cantidad = 1, fraccionado = false) => {
+        const i = carrito.findIndex((it) => it.id_lote === lote.id_lote);
+        if (i === -1) {
+            if (cantidad > lote.cantidad_disponible) {
                 Swal.fire({ icon: 'warning', title: 'No hay más existencias en este lote', timer: 1500, showConfirmButton: false });
-                return actual;
+                return false;
             }
-            return actual.map((it, idx) => idx === i ? { ...it, cantidad: it.cantidad + 1 } : it);
-        });
+            setCarrito([...carrito, {
+                id_producto,
+                descuentos,
+                id_lote: lote.id_lote,
+                producto,
+                nombre_lote: lote.nombre_lote,
+                precio_venta: Number(lote.precio_venta),
+                cantidad_disponible: lote.cantidad_disponible,
+                cantidad,
+                fraccionado,
+            }]);
+            return true;
+        }
+        if (redondear(carrito[i].cantidad + cantidad) > carrito[i].cantidad_disponible) {
+            Swal.fire({ icon: 'warning', title: 'No hay más existencias en este lote', timer: 1500, showConfirmButton: false });
+            return false;
+        }
+        setCarrito(carrito.map((it, idx) => idx === i ? { ...it, cantidad: redondear(it.cantidad + cantidad), fraccionado: it.fraccionado || fraccionado } : it));
+        return true;
+    }, [carrito]);
+
+    const buscarPorMedida = useCallback(async (q: string): Promise<ProductoVenta[]> => {
+        const r = await peticion(`/ventas/medida?q=${encodeURIComponent(q)}`);
+        if (!r.ok) throw new Error(primerError(r.data));
+        return r.data;
     }, []);
 
     const escanear = useCallback(async (codigo: string) => {
         const r = await peticion(`/ventas/codigo/${encodeURIComponent(codigo)}`);
         if (r.ok && r.data?.found) {
-            agregarAlCarrito(r.data.producto, r.data.lote, r.data.id_producto, r.data.descuentos ?? []);
-            Swal.fire({ icon: 'success', title: `${r.data.producto} (${r.data.lote.nombre_lote}) agregado`, timer: 1200, showConfirmButton: false, timerProgressBar: true });
+            if (agregarAlCarrito(r.data.producto, r.data.lote, r.data.id_producto, r.data.descuentos ?? [])) {
+                Swal.fire({ icon: 'success', title: `${r.data.producto} (${r.data.lote.nombre_lote}) agregado`, timer: 1200, showConfirmButton: false, timerProgressBar: true });
+            }
         } else {
             Swal.fire({ icon: 'warning', title: `No se encontró un lote disponible con el código: ${codigo}`, timer: 2000, showConfirmButton: false, timerProgressBar: true });
         }
@@ -156,16 +169,20 @@ export default function Ventas({ categorias }: { categorias: CategoriaVenta[] })
     // Texto que se está escribiendo en la cantidad (permite dejar el campo vacío mientras se edita)
     const [textoCantidad, setTextoCantidad] = useState<Record<number, string>>({});
     const escribirCantidad = (id: number, texto: string) => {
-        if (!/^\d*$/.test(texto)) return;
+        const fraccionado = carrito.find((it) => it.id_lote === id)?.fraccionado;
+        if (!(fraccionado ? /^\d*\.?\d{0,2}$/ : /^\d*$/).test(texto)) return;
         setTextoCantidad((t) => ({ ...t, [id]: texto }));
-        if (texto !== '') cambiarCantidad(id, Number(texto));
+        const numero = Number(texto);
+        if (texto !== '' && !Number.isNaN(numero)) cambiarCantidad(id, numero);
     };
     const terminarCantidad = (id: number) => setTextoCantidad((t) => { const { [id]: _omitido, ...resto } = t; return resto; });
 
     const cambiarCantidad = (id: number, valor: number) => {
         setCarrito((actual) => actual.map((it) => {
             if (it.id_lote !== id) return it;
-            const cant = Math.max(1, Math.min(it.cantidad_disponible, Math.floor(valor) || 1));
+            const cant = it.fraccionado
+                ? Math.max(0.01, Math.min(it.cantidad_disponible, redondear(valor) || 0.01))
+                : Math.max(1, Math.min(it.cantidad_disponible, Math.floor(valor) || 1));
             return { ...it, cantidad: cant };
         }));
     };
@@ -173,7 +190,7 @@ export default function Ventas({ categorias }: { categorias: CategoriaVenta[] })
     // El descuento depende de la cantidad total del producto en el carrito (suma de sus lotes)
     const lineas = useMemo(() => {
         const porProducto: Record<number, number> = {};
-        carrito.forEach((it) => { porProducto[it.id_producto] = (porProducto[it.id_producto] ?? 0) + it.cantidad; });
+        carrito.forEach((it) => { porProducto[it.id_producto] = redondear((porProducto[it.id_producto] ?? 0) + it.cantidad); });
         return carrito.map((it) => {
             const porcentaje = porcentajeParaCantidad(it.descuentos, porProducto[it.id_producto]);
             const bruto = redondear(it.precio_venta * it.cantidad);
@@ -210,7 +227,7 @@ export default function Ventas({ categorias }: { categorias: CategoriaVenta[] })
         const r = await peticion('/ventas', {
             method: 'POST',
             body: {
-                items: carrito.map((it) => ({ id_lote: it.id_lote, cantidad: it.cantidad })),
+                items: carrito.map((it) => ({ id_lote: it.id_lote, cantidad: it.cantidad, fraccionado: it.fraccionado ?? false })),
                 fk_cliente: cliente?.id_cliente ?? null,
                 tipo_pago: tipoPago,
                 fecha_vencimiento: tipoPago === 'credito' ? fechaVencimiento : null,
@@ -290,6 +307,8 @@ export default function Ventas({ categorias }: { categorias: CategoriaVenta[] })
                                 className="w-full md:w-1/3 rounded-xl border border-slate-200 bg-slate-50 p-3 outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition"
                             />
                         </div>
+
+                        <VentaPorMedida onBuscar={buscarPorMedida} onAgregar={agregarAlCarrito} />
 
                         {cargando && productos.length === 0 && <p className="text-gray-500">Buscando...</p>}
                         {!cargando && productos.length === 0 && (
@@ -377,17 +396,17 @@ export default function Ventas({ categorias }: { categorias: CategoriaVenta[] })
                                         </div>
                                         <div className="flex items-center justify-between text-sm">
                                             <div className="flex items-center gap-1">
-                                                <button onClick={() => cambiarCantidad(it.id_lote, it.cantidad - 1)} className="w-7 h-7 rounded border hover:bg-gray-100">-</button>
+                                                <button onClick={() => cambiarCantidad(it.id_lote, it.cantidad - (it.fraccionado ? 0.5 : 1))} className="w-7 h-7 rounded border hover:bg-gray-100">-</button>
                                                 <input
                                                     type="text"
-                                                    inputMode="numeric"
+                                                    inputMode={it.fraccionado ? 'decimal' : 'numeric'}
                                                     value={textoCantidad[it.id_lote] ?? String(it.cantidad)}
                                                     onFocus={(e) => e.target.select()}
                                                     onChange={(e) => escribirCantidad(it.id_lote, e.target.value)}
                                                     onBlur={() => terminarCantidad(it.id_lote)}
                                                     className="w-16 rounded border p-1 text-center"
                                                 />
-                                                <button onClick={() => cambiarCantidad(it.id_lote, it.cantidad + 1)} className="w-7 h-7 rounded border hover:bg-gray-100">+</button>
+                                                <button onClick={() => cambiarCantidad(it.id_lote, it.cantidad + (it.fraccionado ? 0.5 : 1))} className="w-7 h-7 rounded border hover:bg-gray-100">+</button>
                                                 <span className="text-gray-500 ml-1">x {dinero(it.precio_venta)}</span>
                                             </div>
                                             <div className="text-right">

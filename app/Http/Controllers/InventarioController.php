@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Casts\Cantidad;
 use App\Models\Categoria;
 use App\Models\CodigoBarra;
 use App\Models\ImagenProducto;
@@ -33,6 +34,8 @@ class InventarioController extends Controller
         'cantidad.min' => 'La cantidad no puede ser negativa.',
         'cantidad_disponible.required' => 'La cantidad disponible es obligatoria.',
         'cantidad_disponible.integer' => 'La cantidad disponible debe ser un número entero.',
+        'cantidad_disponible.numeric' => 'La cantidad disponible debe ser un número.',
+        'cantidad_disponible.decimal' => 'La cantidad disponible admite como máximo 2 decimales.',
         'cantidad_disponible.min' => 'La cantidad disponible no puede ser negativa.',
         'fecha_ingreso.required' => 'La fecha de ingreso es obligatoria.',
         'fecha_ingreso.date' => 'La fecha de ingreso no es válida.',
@@ -84,7 +87,7 @@ class InventarioController extends Controller
                 'descripcion' => $p->descripcion,
                 'categoria' => $p->categoria?->nombre_categoria,
                 'imagen' => $p->imagen ? $p->imagen->dataUri() : '/assets/productos/no-hay-imagen.jpg',
-                'existencias' => (int) $p->lotes->where('activo', true)->sum('cantidad_disponible'),
+                'existencias' => Cantidad::normalizar($p->lotes->where('activo', true)->sum('cantidad_disponible')),
                 'lotes' => $p->lotes->map(fn (Lote $l) => [
                     'id_lote' => $l->id_lote,
                     'nombre_lote' => $l->nombre_lote,
@@ -144,7 +147,7 @@ class InventarioController extends Controller
                 'id_producto' => $p->id_producto,
                 'nombre_producto' => $p->nombre_producto,
                 'categoria' => $p->categoria?->nombre_categoria,
-                'existencias' => (int) $p->lotes->sum('cantidad_disponible'),
+                'existencias' => Cantidad::normalizar($p->lotes->sum('cantidad_disponible')),
                 'precio_min' => $p->lotes->isNotEmpty() ? (float) $p->lotes->min('precio_venta') : null,
                 'precio_max' => $p->lotes->isNotEmpty() ? (float) $p->lotes->max('precio_venta') : null,
             ]);
@@ -335,15 +338,15 @@ class InventarioController extends Controller
     public function actualizarLote(Request $request, Lote $lote)
     {
         $datos = $request->validate(array_merge(self::REGLAS_LOTE, [
-            'cantidad_disponible' => 'required|integer|min:0|max:99999999',
+            'cantidad_disponible' => 'required|numeric|min:0|max:99999999|decimal:0,2',
             'activo' => 'required|boolean',
         ]), self::MENSAJES);
 
-        $disponible = (int) $datos['cantidad_disponible'];
+        $disponible = Cantidad::normalizar($datos['cantidad_disponible']);
         $activo = (bool) $datos['activo'];
 
         // Reposición de un lote agotado: se reactiva
-        if ($lote->cantidad_disponible === 0 && $disponible > 0) {
+        if ($lote->cantidad_disponible == 0 && $disponible > 0) {
             $activo = true;
         }
 

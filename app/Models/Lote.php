@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Casts\Cantidad;
 use Illuminate\Database\Eloquent\Model;
 
 class Lote extends Model
@@ -22,6 +23,8 @@ class Lote extends Model
 
     protected $casts = [
         'activo' => 'boolean',
+        'cantidad' => Cantidad::class,
+        'cantidad_disponible' => Cantidad::class,
         'precio_compra' => 'decimal:2',
         'precio_venta' => 'decimal:2',
         'fecha_ingreso' => 'date:Y-m-d',
