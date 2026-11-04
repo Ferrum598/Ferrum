@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Comprobante;
+use App\Models\Cliente;
 use App\Models\Lote;
 use App\Models\Producto;
 use App\Models\Usuario;
@@ -24,9 +25,13 @@ beforeEach(function () {
     ]);
 });
 
-function ventaMedida(float|int $cantidad, bool $fraccionado = true): array
+function ventaMedida(float|int $cantidad, bool $fraccionado = true, ?float $recibido = null): array
 {
-    return ['items' => [['id_lote' => test()->lote->id_lote, 'cantidad' => $cantidad, 'fraccionado' => $fraccionado]], 'tipo_pago' => 'contado'];
+    return [
+        'items' => [['id_lote' => test()->lote->id_lote, 'cantidad' => $cantidad, 'fraccionado' => $fraccionado]],
+        'tipo_pago' => 'contado',
+        'monto_recibido' => $recibido ?? round($cantidad * 200, 2),
+    ];
 }
 
 test('venta por medida descuenta stock fraccionado y calcula el total', function () {
@@ -77,10 +82,42 @@ test('el comprobante muestra la cantidad fraccionada y anular devuelve el stock'
 
     $version = app(\App\Http\Middleware\HandleInertiaRequests::class)->version(request());
     $this->get("/comprobantes/{$id}", ['X-Inertia' => 'true', 'X-Inertia-Version' => (string) $version])
-        ->assertOk()->assertJsonPath('props.comprobante.detalles.0.cantidad', 0.5);
+        ->assertOk()
+        ->assertJsonPath('props.comprobante.detalles.0.cantidad', 0.5)
+        ->assertJsonPath('props.comprobante.monto_recibido', '100.00')
+        ->assertJsonPath('props.comprobante.cambio', '0.00');
 
     $this->post("/comprobantes/{$id}/anular")->assertRedirect();
     expect($this->lote->fresh()->cantidad_disponible)->toBe(10);
+});
+
+test('venta de contado calcula cambio y rechaza efectivo insuficiente', function () {
+    $this->postJson('/ventas', ventaMedida(1.5, true, 299.99))
+        ->assertStatus(422)
+        ->assertJsonValidationErrors('monto_recibido');
+    expect(Comprobante::count())->toBe(0)->and($this->lote->fresh()->cantidad_disponible)->toBe(10);
+
+    $id = $this->postJson('/ventas', ventaMedida(1.5, true, 350))
+        ->assertCreated()
+        ->json('id_comprobante');
+
+    $comprobante = Comprobante::findOrFail($id);
+    expect((float) $comprobante->monto_recibido)->toBe(350.0)
+        ->and((float) $comprobante->cambio)->toBe(50.0);
+});
+
+test('ventas a credito no registran efectivo recibido ni cambio', function () {
+    $cliente = Cliente::create(['nombre_cliente' => 'Ana', 'apellido_cliente' => 'López']);
+    $payload = ventaMedida(1.5);
+    $payload['tipo_pago'] = 'credito';
+    $payload['monto_recibido'] = null;
+    $payload['fk_cliente'] = $cliente->id_cliente;
+    $payload['fecha_vencimiento'] = now()->addDays(7)->toDateString();
+
+    $id = $this->postJson('/ventas', $payload)->assertCreated()->json('id_comprobante');
+
+    expect(Comprobante::findOrFail($id)->monto_recibido)->toBeNull()
+        ->and(Comprobante::findOrFail($id)->cambio)->toBeNull();
 });
 
 test('la busqueda por medida encuentra por nombre o descripcion sin importar mayusculas', function () {

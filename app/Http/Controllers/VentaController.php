@@ -152,6 +152,7 @@ class VentaController extends Controller
             'items.*.fraccionado' => ['sometimes', 'boolean'],
             'fk_cliente' => ['nullable', 'integer', 'exists:clientes,id_cliente'],
             'tipo_pago' => ['required', 'in:contado,credito'],
+            'monto_recibido' => ['required_if:tipo_pago,contado', 'prohibited_if:tipo_pago,credito', 'nullable', 'numeric', 'min:0', 'max:99999999.99', 'decimal:0,2'],
             'fecha_vencimiento' => ['required_if:tipo_pago,credito', 'nullable', 'date', 'after:today'],
             'descripcion' => ['nullable', 'string', 'max:255'],
         ], [
@@ -218,6 +219,15 @@ class VentaController extends Controller
                 $lineas[] = [$lote, $cantidad, $subtotal, $porcentaje, $descuento];
             }
             $total = round($total, 2);
+            $montoRecibidoCentavos = $esCredito ? null : (int) round((float) $datos['monto_recibido'] * 100);
+            $totalCentavos = (int) round($total * 100);
+            if ($montoRecibidoCentavos !== null && $montoRecibidoCentavos < $totalCentavos) {
+                throw ValidationException::withMessages([
+                    'monto_recibido' => 'El monto recibido no puede ser menor al total de la venta.',
+                ]);
+            }
+            $montoRecibido = $montoRecibidoCentavos === null ? null : $montoRecibidoCentavos / 100;
+            $cambio = $montoRecibidoCentavos === null ? null : ($montoRecibidoCentavos - $totalCentavos) / 100;
 
             $venta = Venta::create([
                 'fecha_venta' => now(),
@@ -250,6 +260,8 @@ class VentaController extends Controller
                 'numero_comprobante' => Comprobante::siguienteNumero(),
                 'fecha_emision' => now(),
                 'total' => $total,
+                'monto_recibido' => $montoRecibido,
+                'cambio' => $cambio,
                 'veces_impreso' => 0,
             ]);
 

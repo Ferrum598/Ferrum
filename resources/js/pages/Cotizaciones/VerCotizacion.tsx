@@ -16,12 +16,22 @@ export default function VerCotizacion({ cotizacion }: Props) {
     return (
         <SistemaLayout>
             <Head title={`Cotización ${cotizacion.numero_cotizacion}`} />
+            <style>{`@page { size: A4 portrait; margin: 12mm; }
+                @media print {
+                    html, body, #app { height: auto !important; min-height: 0 !important; overflow: visible !important; }
+                    #app > div:has(.quotation-print-root) { display: block !important; height: auto !important; min-height: 0 !important; overflow: visible !important; }
+                    main:has(.quotation-print-root) { display: block !important; height: auto !important; overflow: visible !important; margin: 0 !important; padding: 0 !important; }
+                    .quotation-print-root, .quotation-print-root > div { width: 100% !important; max-width: none !important; height: auto !important; overflow: visible !important; margin: 0 !important; }
+                    .quotation-print-root table { width: 100% !important; border-collapse: collapse !important; }
+                    .quotation-print-root thead { display: table-header-group; }
+                    .quotation-print-root tr { break-inside: avoid; page-break-inside: avoid; }
+                }`}</style>
             <div className="w-full max-w-3xl mx-auto px-4 py-8 space-y-4 print:p-0 print:max-w-none">
                 <div className="flex justify-between gap-3 print:hidden">
                     <Link href="/cotizaciones" className="rounded-xl border border-slate-200 bg-white px-5 py-3 font-bold text-slate-600 transition hover:bg-slate-50">← Volver</Link>
                     <button onClick={() => window.print()} className="rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-3 font-bold text-white shadow-md transition hover:-translate-y-0.5 hover:shadow-lg">🖨️ Imprimir</button>
                 </div>
-                <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-md md:p-8 print:border-0 print:shadow-none">
+                <div className="quotation-print-root rounded-3xl border border-slate-100 bg-white p-6 shadow-md md:p-8 print:border-0 print:shadow-none">
                     <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 pb-5">
                         <div>
                             <h1 className="text-2xl font-extrabold bg-gradient-to-r from-slate-900 to-blue-700 bg-clip-text text-transparent">Cotización</h1>

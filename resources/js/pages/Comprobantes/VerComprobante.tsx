@@ -45,7 +45,19 @@ export default function VerComprobante({ comprobante }: { comprobante: Comproban
     return (
         <SistemaLayout>
             <Head title={`Comprobante ${comprobante.numero_comprobante}`} />
-            <div className="w-full max-w-3xl mx-auto px-4 py-8 space-y-4 print:p-0 print:max-w-none">
+            <style>{`@media print {
+                html, body, #app { height: auto !important; min-height: 0 !important; overflow: visible !important; background: #fff !important; }
+                #app > div:has(.receipt-print-root) { display: block !important; height: auto !important; min-height: 0 !important; overflow: visible !important; }
+                main:has(.receipt-print-root) { display: block !important; height: auto !important; overflow: visible !important; margin: 0 !important; padding: 0 !important; }
+                .receipt-print-root { display: block !important; width: 100% !important; max-width: none !important; margin: 0 !important; padding: 0 !important; overflow: visible !important; }
+                .receipt-print-root article { width: 100% !important; max-width: none !important; overflow: visible !important; border: 0 !important; border-radius: 0 !important; box-shadow: none !important; }
+                .receipt-print-root article > div { padding: 2mm !important; }
+                .receipt-print-root table { width: 100% !important; table-layout: fixed !important; border-collapse: collapse !important; }
+                .receipt-print-root thead { display: table-header-group; }
+                .receipt-print-root tr { break-inside: avoid; page-break-inside: avoid; }
+                .receipt-print-root th, .receipt-print-root td { overflow-wrap: anywhere !important; }
+            }`}</style>
+            <div className="receipt-print-root w-full max-w-3xl mx-auto px-4 py-8 space-y-4 print:p-0 print:max-w-none">
                 <div className="flex justify-between items-center flex-wrap gap-2 print:hidden">
                     <Link href="/comprobantes" className="text-blue-600 hover:underline font-medium">← Volver a comprobantes</Link>
                     <div className="flex items-center gap-3">
@@ -128,6 +140,12 @@ export default function VerComprobante({ comprobante }: { comprobante: Comproban
                                 Total: Q{Number(comprobante.total).toFixed(2)}
                             </div>
                         </div>
+                        {comprobante.tipo_pago === 'contado' && comprobante.monto_recibido !== null && comprobante.cambio !== null && (
+                            <div className="ml-auto w-full max-w-xs space-y-1 text-right text-xs print:max-w-none">
+                                <p>Recibido: Q{Number(comprobante.monto_recibido).toFixed(2)}</p>
+                                <p className="font-bold">Cambio: Q{Number(comprobante.cambio).toFixed(2)}</p>
+                            </div>
+                        )}
 
                         {comprobante.credito && (
                             <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm space-y-1 text-amber-900">

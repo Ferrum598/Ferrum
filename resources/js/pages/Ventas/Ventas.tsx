@@ -58,6 +58,7 @@ export default function Ventas({ categorias }: { categorias: CategoriaVenta[] })
     const [codigoManual, setCodigoManual] = useState('');
 
     const [tipoPago, setTipoPago] = useState<'contado' | 'credito'>('contado');
+    const [montoRecibido, setMontoRecibido] = useState<string | null>(null);
     const [cliente, setCliente] = useState<ClienteVenta | null>(null);
     const [buscarCliente, setBuscarCliente] = useState('');
     const [clientes, setClientes] = useState<ClienteVenta[]>([]);
@@ -200,6 +201,9 @@ export default function Ventas({ categorias }: { categorias: CategoriaVenta[] })
     }, [carrito]);
     const total = useMemo(() => redondear(lineas.reduce((s, l) => s + l.subtotal, 0)), [lineas]);
     const totalDescuento = useMemo(() => redondear(lineas.reduce((s, l) => s + l.descuento, 0)), [lineas]);
+    const montoEfectivo = montoRecibido === null ? total : Number(montoRecibido);
+    const cambio = redondear(Math.max(0, montoEfectivo - total));
+    const faltaEfectivo = tipoPago === 'contado' && montoEfectivo < total;
 
     const crearCliente = async () => {
         const r = await peticion('/clientes/rapido', {
@@ -219,6 +223,10 @@ export default function Ventas({ categorias }: { categorias: CategoriaVenta[] })
             Swal.fire({ icon: 'warning', title: 'Agregue productos a la venta' });
             return;
         }
+        if (tipoPago === 'contado' && (!Number.isFinite(montoEfectivo) || faltaEfectivo)) {
+            Swal.fire({ icon: 'warning', title: 'El monto recibido no cubre el total de la venta' });
+            return;
+        }
         if (tipoPago === 'credito') {
             if (!cliente) { Swal.fire({ icon: 'warning', title: 'Seleccione un cliente para una venta a crédito' }); return; }
             if (!fechaVencimiento || fechaVencimiento < manana()) { Swal.fire({ icon: 'warning', title: 'Seleccione una fecha de vencimiento posterior a hoy' }); return; }
@@ -230,6 +238,7 @@ export default function Ventas({ categorias }: { categorias: CategoriaVenta[] })
                 items: carrito.map((it) => ({ id_lote: it.id_lote, cantidad: it.cantidad, fraccionado: it.fraccionado ?? false })),
                 fk_cliente: cliente?.id_cliente ?? null,
                 tipo_pago: tipoPago,
+                monto_recibido: tipoPago === 'contado' ? montoEfectivo : null,
                 fecha_vencimiento: tipoPago === 'credito' ? fechaVencimiento : null,
                 descripcion: tipoPago === 'credito' ? descripcion || null : null,
             },
@@ -241,6 +250,7 @@ export default function Ventas({ categorias }: { categorias: CategoriaVenta[] })
             setCliente(null);
             setBuscarCliente('');
             setTipoPago('contado');
+            setMontoRecibido(null);
             setFechaVencimiento('');
             setDescripcion('');
             cargarProductos(buscar, categoria, pagina);
@@ -507,9 +517,32 @@ export default function Ventas({ categorias }: { categorias: CategoriaVenta[] })
                             </div>
                         )}
 
+                        {tipoPago === 'contado' && (
+                            <div className="space-y-2 border-t pt-3">
+                                <label htmlFor="monto-recibido" className="block text-gray-600">Efectivo recibido</label>
+                                <input
+                                    id="monto-recibido"
+                                    type="number"
+                                    min={total}
+                                    max="99999999.99"
+                                    step="0.01"
+                                    value={montoRecibido ?? total.toFixed(2)}
+                                    onChange={(e) => setMontoRecibido(e.target.value)}
+                                    className={`w-full rounded border p-2 ${faltaEfectivo ? 'border-red-400 focus:ring-red-300' : ''}`}
+                                />
+                                <div className="flex items-center justify-between text-sm font-semibold">
+                                    <span>{faltaEfectivo ? 'Falta por recibir' : 'Cambio'}</span>
+                                    <span className={faltaEfectivo ? 'text-red-600' : 'text-emerald-700'}>
+                                        Q{(faltaEfectivo ? redondear(total - montoEfectivo) : cambio).toFixed(2)}
+                                    </span>
+                                </div>
+                                {faltaEfectivo && <p role="alert" className="text-xs text-red-600">El efectivo recibido debe cubrir el total de la venta.</p>}
+                            </div>
+                        )}
+
                         <button
                             onClick={confirmarVenta}
-                            disabled={guardando || carrito.length === 0}
+                            disabled={guardando || carrito.length === 0 || faltaEfectivo}
                             className="w-full rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-3 font-semibold shadow-lg hover:from-blue-700 hover:to-indigo-700 active:scale-[0.98] transition disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {guardando ? 'Guardando...' : 'Confirmar venta'}
