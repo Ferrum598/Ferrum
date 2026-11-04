@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Casts\Cantidad;
 use Illuminate\Database\Eloquent\Model;
 
 class DetalleVenta extends Model
@@ -10,6 +11,8 @@ class DetalleVenta extends Model
     protected $primaryKey = 'id_detalle';
 
     protected $fillable = ['fk_venta', 'fk_lote', 'cantidad', 'precio_unitario', 'costo_unitario', 'subtotal', 'descuento_porcentaje', 'descuento_monto'];
+
+    protected $casts = ['cantidad' => Cantidad::class];
 
     public function venta()
     {

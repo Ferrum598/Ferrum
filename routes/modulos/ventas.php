@@ -11,6 +11,7 @@ Route::middleware('permiso:ventas')->prefix('ventas')->name('ventas.')->group(fu
     Route::get('/', [VentaController::class, 'index'])->name('index');
     Route::get('/historial', [VentaController::class, 'historial'])->name('historial');
     Route::get('/buscar', [VentaController::class, 'buscar'])->name('buscar');
+    Route::get('/medida', [VentaController::class, 'buscarMedida'])->name('medida');
     Route::get('/imagen/{id}', [VentaController::class, 'imagen'])->whereNumber('id')->name('imagen');
     Route::get('/codigo/{codigo}', [VentaController::class, 'porCodigo'])->where('codigo', '.+')->name('codigo');
     Route::post('/', [VentaController::class, 'store'])->name('store');

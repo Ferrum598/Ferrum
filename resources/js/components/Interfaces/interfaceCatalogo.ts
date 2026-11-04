@@ -30,6 +30,7 @@ export interface ItemCarrito {
     precio_venta: number;
     cantidad_disponible: number;
     cantidad: number;
+    fraccionado?: boolean;
 }
 
 export interface ClienteVenta {

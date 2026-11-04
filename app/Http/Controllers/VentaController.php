@@ -35,9 +35,39 @@ class VentaController extends Controller
             'id_lote' => $lote->id_lote,
             'nombre_lote' => $lote->nombre_lote,
             'precio_venta' => (string) $lote->precio_venta,
-            'cantidad_disponible' => (int) $lote->cantidad_disponible,
+            'cantidad_disponible' => $lote->cantidad_disponible,
             'fecha_ingreso' => $lote->fecha_ingreso?->format('Y-m-d'),
         ];
+    }
+
+    // Búsqueda para la venta por medida: por nombre o descripción, sin distinguir mayúsculas
+    public function buscarMedida(Request $request): JsonResponse
+    {
+        $q = mb_strtolower(trim((string) $request->query('q', '')));
+        if ($q === '') {
+            return response()->json([]);
+        }
+        $like = '%' . $q . '%';
+
+        $productos = \App\Models\Producto::query()
+            ->where('activo', true)
+            ->whereHas('lotesDisponibles')
+            ->where(fn($query) => $query->whereRaw('LOWER(nombre_producto) LIKE ?', [$like])
+                ->orWhereRaw('LOWER(descripcion) LIKE ?', [$like]))
+            ->with(['categoria:id_categoria,nombre_categoria', 'descuentos', 'lotesDisponibles' => fn($query) => $query->orderBy('fecha_ingreso')->orderBy('id_lote')])
+            ->orderBy('nombre_producto')
+            ->limit(15)
+            ->get()
+            ->map(fn($p) => [
+                'id_producto' => $p->id_producto,
+                'nombre_producto' => $p->nombre_producto,
+                'descripcion' => $p->descripcion,
+                'categoria' => $p->categoria?->nombre_categoria,
+                'descuentos' => $p->descuentos->map(fn($d) => ['cantidad_minima' => $d->cantidad_minima, 'porcentaje' => $d->porcentaje])->values(),
+                'lotes' => $p->lotesDisponibles->map(fn($l) => $this->formatearLote($l))->values(),
+            ]);
+
+        return response()->json($productos);
     }
 
     // Productos con sus lotes activos y con stock
@@ -118,7 +148,8 @@ class VentaController extends Controller
         $datos = $request->validate([
             'items' => ['required', 'array', 'min:1'],
             'items.*.id_lote' => ['required', 'integer'],
-            'items.*.cantidad' => ['required', 'integer', 'min:1'],
+            'items.*.cantidad' => ['required', 'numeric', 'min:0.01', 'max:99999999', 'decimal:0,2'],
+            'items.*.fraccionado' => ['sometimes', 'boolean'],
             'fk_cliente' => ['nullable', 'integer', 'exists:clientes,id_cliente'],
             'tipo_pago' => ['required', 'in:contado,credito'],
             'fecha_vencimiento' => ['required_if:tipo_pago,credito', 'nullable', 'date', 'after:today'],
@@ -126,6 +157,8 @@ class VentaController extends Controller
         ], [
             'items.required' => 'Agregue al menos un producto a la venta.',
             'items.min' => 'Agregue al menos un producto a la venta.',
+            'items.*.cantidad.min' => 'La cantidad debe ser mayor a 0.',
+            'items.*.cantidad.decimal' => 'La cantidad admite como máximo 2 decimales.',
             'fecha_vencimiento.required_if' => 'La fecha de vencimiento es obligatoria para ventas a crédito.',
             'fecha_vencimiento.after' => 'La fecha de vencimiento debe ser posterior a hoy.',
             'fk_cliente.exists' => 'El cliente seleccionado no existe.',
@@ -136,11 +169,15 @@ class VentaController extends Controller
             throw ValidationException::withMessages(['fk_cliente' => 'Seleccione un cliente para una venta a crédito.']);
         }
 
-        // Une ítems repetidos del mismo lote
+        // Une ítems repetidos del mismo lote; solo la venta por medida admite cantidades fraccionadas
         $cantidades = [];
         foreach ($datos['items'] as $item) {
+            $cantidad = (float) $item['cantidad'];
+            if (empty($item['fraccionado']) && floor($cantidad) != $cantidad) {
+                throw ValidationException::withMessages(['items' => 'La cantidad debe ser un número entero.']);
+            }
             $id = (int) $item['id_lote'];
-            $cantidades[$id] = ($cantidades[$id] ?? 0) + (int) $item['cantidad'];
+            $cantidades[$id] = round(($cantidades[$id] ?? 0) + $cantidad, 2);
         }
         ksort($cantidades);
 
@@ -156,7 +193,7 @@ class VentaController extends Controller
             foreach ($cantidades as $idLote => $cantidad) {
                 $lote = $lotes->get($idLote);
                 if ($lote) {
-                    $porProducto[$lote->fk_producto] = ($porProducto[$lote->fk_producto] ?? 0) + $cantidad;
+                    $porProducto[$lote->fk_producto] = round(($porProducto[$lote->fk_producto] ?? 0) + $cantidad, 2);
                 }
             }
             $reglas = DescuentoProducto::whereIn('fk_producto', array_keys($porProducto))->get()->groupBy('fk_producto');
@@ -200,7 +237,7 @@ class VentaController extends Controller
                     'descuento_porcentaje' => $porcentaje,
                     'descuento_monto' => $descuento,
                 ]);
-                $restante = $lote->cantidad_disponible - $cantidad;
+                $restante = round($lote->cantidad_disponible - $cantidad, 2);
                 $lote->update([
                     'cantidad_disponible' => $restante,
                     'activo' => $restante > 0,
