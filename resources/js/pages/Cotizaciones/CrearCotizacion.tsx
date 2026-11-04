@@ -2,7 +2,7 @@ import SistemaLayout from "@/layouts/SistemaLayout/SistemaLayout";
 import { Head, Link, useForm } from "@inertiajs/react";
 import { FormEvent, useEffect, useState } from "react";
 
-type Producto = { id_producto: number; nombre: string; precio: number };
+type Producto = { id_producto: number; descripcion: string; precio: number };
 type Cliente = { id_cliente: number; nombre_cliente: string; apellido_cliente: string };
 type Item = { descripcion: string; cantidad: number; precio_unitario: number };
 
@@ -36,9 +36,9 @@ export default function CrearCotizacion({ clientes }: { clientes: Cliente[] }) {
 
     const agregar = (item: Item) => setData("items", [...data.items, item]);
     const agregarProducto = (p: Producto) => {
-        const existente = data.items.findIndex((i) => i.descripcion === p.nombre && i.precio_unitario === p.precio);
+        const existente = data.items.findIndex((i) => i.descripcion === p.descripcion && i.precio_unitario === p.precio);
         if (existente >= 0) cambiar(existente, { cantidad: data.items[existente].cantidad + 1 });
-        else agregar({ descripcion: p.nombre, cantidad: 1, precio_unitario: p.precio });
+        else agregar({ descripcion: p.descripcion, cantidad: 1, precio_unitario: p.precio });
         setBusqueda(""); setResultados([]);
     };
     const cambiar = (idx: number, cambio: Partial<Item>) => setData("items", data.items.map((it, i) => (i === idx ? { ...it, ...cambio } : it)));
@@ -86,7 +86,7 @@ export default function CrearCotizacion({ clientes }: { clientes: Cliente[] }) {
                                     {resultados.map((p) => (
                                         <li key={p.id_producto}>
                                             <button type="button" onClick={() => agregarProducto(p)} className="flex w-full items-center justify-between gap-3 p-3 text-left text-sm transition hover:bg-blue-50">
-                                                <span className="font-bold text-slate-800">{p.nombre}</span>
+                                                <span className="font-bold text-slate-800">{p.descripcion}</span>
                                                 <span className="font-extrabold text-slate-600">{money(p.precio)}</span>
                                             </button>
                                         </li>

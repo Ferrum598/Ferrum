@@ -51,8 +51,11 @@ class CotizacionController extends Controller
             return response()->json([]);
         }
 
+        $like = '%' . mb_strtolower($q) . '%';
         $productos = Producto::where('activo', true)
-            ->whereRaw('LOWER(nombre_producto) LIKE ?', ['%' . mb_strtolower($q) . '%'])
+            ->where(fn ($query) => $query
+                ->whereRaw('LOWER(nombre_producto) LIKE ?', [$like])
+                ->orWhereRaw('LOWER(descripcion) LIKE ?', [$like]))
             ->whereHas('lotesDisponibles')
             ->with('lotesDisponibles')
             ->orderBy('nombre_producto')
@@ -60,7 +63,7 @@ class CotizacionController extends Controller
             ->get()
             ->map(fn($p) => [
                 'id_producto' => $p->id_producto,
-                'nombre' => $p->nombre_producto,
+                'descripcion' => trim((string) $p->descripcion) !== '' ? $p->descripcion : $p->nombre_producto,
                 'precio' => (float) $p->lotesDisponibles->min('precio_venta'),
             ]);
 

@@ -54,7 +54,8 @@ class CodigoBarraController extends Controller
             $query->where(function ($q) use ($like) {
                 $q->whereRaw('LOWER(codigo) LIKE ?', [$like])
                     ->orWhereHas('lote', fn ($l) => $l->whereRaw('LOWER(nombre_lote) LIKE ?', [$like])
-                        ->orWhereHas('producto', fn ($p) => $p->whereRaw('LOWER(nombre_producto) LIKE ?', [$like])));
+                        ->orWhereHas('producto', fn ($p) => $p->whereRaw('LOWER(nombre_producto) LIKE ?', [$like])
+                            ->orWhereRaw('LOWER(descripcion) LIKE ?', [$like])));
             });
         }
 
