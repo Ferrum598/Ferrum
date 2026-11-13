@@ -1,5 +1,4 @@
 import SistemaLayout from "@/layouts/SistemaLayout/SistemaLayout";
-import PaginacionVentas from "@/components/PaginacionVentas/PaginacionVentas";
 import { AvisoInterno, BadgeTipoPago } from "@/components/PaginacionVentas/AvisoInterno";
 import { ComprobanteLista, Paginado } from "@/components/Interfaces/interfaceCatalogo";
 import { Head, Link, router } from "@inertiajs/react";
@@ -18,6 +17,18 @@ export default function Comprobantes({ comprobantes, filtros }: { comprobantes: 
         if (fecha) params.fecha = fecha;
         router.get('/comprobantes', params, { preserveState: true });
     };
+
+    const cambiarPagina = (page: number) => {
+        const params: Record<string, string | number> = { page };
+        if (filtros.q) params.q = filtros.q;
+        if (filtros.fecha) params.fecha = filtros.fecha;
+        router.get('/comprobantes', params, { preserveState: true, preserveScroll: true });
+    };
+    const primeraPagina = Math.max(1, Math.min(comprobantes.current_page - 2, comprobantes.last_page - 4));
+    const paginas = Array.from(
+        { length: Math.min(5, comprobantes.last_page) },
+        (_, i) => primeraPagina + i,
+    );
 
     return (
         <SistemaLayout>
@@ -76,7 +87,27 @@ export default function Comprobantes({ comprobantes, filtros }: { comprobantes: 
                         </tbody>
                     </table>
                 </div>
-                <PaginacionVentas paginado={comprobantes} />
+                {comprobantes.last_page > 1 && (
+                    <nav aria-label="Paginación de comprobantes" className="flex flex-wrap justify-center gap-2">
+                        <button className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 shadow-sm transition hover:bg-slate-100 disabled:opacity-50" disabled={comprobantes.current_page <= 1} onClick={() => cambiarPagina(comprobantes.current_page - 1)}>
+                            Anterior
+                        </button>
+                        {paginas.map((page) => (
+                            <button
+                                key={page}
+                                className={`rounded-xl px-3 py-1.5 shadow-sm transition ${comprobantes.current_page === page ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white' : 'border border-slate-200 bg-white hover:bg-slate-100'}`}
+                                onClick={() => cambiarPagina(page)}
+                                disabled={comprobantes.current_page === page}
+                                aria-current={comprobantes.current_page === page ? 'page' : undefined}
+                            >
+                                {page}
+                            </button>
+                        ))}
+                        <button className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 shadow-sm transition hover:bg-slate-100 disabled:opacity-50" disabled={comprobantes.current_page >= comprobantes.last_page} onClick={() => cambiarPagina(comprobantes.current_page + 1)}>
+                            Siguiente
+                        </button>
+                    </nav>
+                )}
             </div>
         </SistemaLayout>
     );
