@@ -8,6 +8,7 @@ use App\Models\Lote;
 use App\Models\Producto;
 use App\Models\Rol;
 use App\Models\Usuario;
+use App\Models\Venta;
 use Database\Seeders\RolSeeder;
 use Database\Seeders\UsuarioSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -149,6 +150,54 @@ test('comprobante se puede ver e imprimir', function () {
     $this->get("/comprobantes/{$id}", ['X-Inertia' => 'true', 'X-Inertia-Version' => (string) $version])
         ->assertOk()->assertJsonPath('props.comprobante.numero_comprobante', 'C-000001');
     $this->postJson("/comprobantes/{$id}/impreso")->assertOk()->assertJson(['veces_impreso' => 1]);
+});
+
+test('comprobantes se cargan por pagina y conservan los filtros', function () {
+    for ($i = 1; $i <= 18; $i++) {
+        $venta = Venta::create([
+            'total' => 10, 'fk_cliente' => $this->cliente->id_cliente, 'fk_usuario' => $this->vendedor->id_usuario,
+        ]);
+        Comprobante::create([
+            'fk_venta' => $venta->id_venta, 'fk_usuario' => $this->vendedor->id_usuario,
+            'numero_comprobante' => sprintf('C-%06d', $i), 'fecha_emision' => '2025-11-01 12:00:00', 'total' => 10,
+        ]);
+    }
+
+    $version = app(\App\Http\Middleware\HandleInertiaRequests::class)->version(request());
+    $headers = ['X-Inertia' => 'true', 'X-Inertia-Version' => (string) $version];
+
+    $this->get('/comprobantes?q=Ana&fecha=2025-11-01', $headers)
+        ->assertOk()->assertJsonCount(15, 'props.comprobantes.data')
+        ->assertJsonPath('props.comprobantes.current_page', 1)
+        ->assertJsonPath('props.comprobantes.data.0.numero_comprobante', 'C-000018');
+
+    $this->get('/comprobantes?q=Ana&fecha=2025-11-01&page=2', $headers)
+        ->assertOk()->assertJsonCount(3, 'props.comprobantes.data')
+        ->assertJsonPath('props.comprobantes.current_page', 2)
+        ->assertJsonPath('props.comprobantes.data.0.numero_comprobante', 'C-000003')
+        ->assertJsonPath('props.filtros.q', 'Ana')
+        ->assertJsonPath('props.filtros.fecha', '2025-11-01');
+
+    $this->get('/comprobantes?q=Otro&fecha=2025-11-01', $headers)
+        ->assertOk()->assertJsonCount(0, 'props.comprobantes.data');
+});
+
+test('comprobante incluye el telefono del cliente cuando existe', function () {
+    $this->cliente->update(['numero_cliente' => '12345678']);
+    $id = $this->postJson('/ventas', venderPayload(['fk_cliente' => $this->cliente->id_cliente]))->json('id_comprobante');
+    $version = app(\App\Http\Middleware\HandleInertiaRequests::class)->version(request());
+    $headers = ['X-Inertia' => 'true', 'X-Inertia-Version' => (string) $version];
+
+    $this->get("/comprobantes/{$id}", $headers)->assertOk()
+        ->assertJsonPath('props.comprobante.cliente.numero', '12345678');
+
+    $this->cliente->update(['numero_cliente' => null]);
+    $this->get("/comprobantes/{$id}", $headers)->assertOk()
+        ->assertJsonPath('props.comprobante.cliente.numero', null);
+
+    $idSinCliente = $this->postJson('/ventas', venderPayload())->json('id_comprobante');
+    $this->get("/comprobantes/{$idSinCliente}", $headers)->assertOk()
+        ->assertJsonPath('props.comprobante.cliente', null);
 });
 
 test('el catalogo se pagina y la imagen se sirve como archivo', function () {
