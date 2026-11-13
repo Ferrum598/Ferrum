@@ -87,6 +87,7 @@ export default function VerComprobante({ comprobante }: { comprobante: Comproban
                             <p><b className="text-slate-500">Fecha:</b> {comprobante.fecha_emision}</p>
                             <p><b className="text-slate-500">Atendido por:</b> {comprobante.vendedor ?? '-'}</p>
                             <p><b className="text-slate-500">Cliente:</b> {comprobante.cliente?.nombre ?? 'Público general'}</p>
+                            {comprobante.cliente?.numero && <p><b className="text-slate-500">Teléfono:</b> {comprobante.cliente.numero}</p>}
                         </div>
 
                         <table className="w-full table-fixed text-left text-xs print:text-[10px]">

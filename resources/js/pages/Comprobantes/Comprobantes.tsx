@@ -76,7 +76,9 @@ export default function Comprobantes({ comprobantes, filtros }: { comprobantes: 
                         </tbody>
                     </table>
                 </div>
-                <PaginacionVentas paginado={comprobantes} />
+                <PaginacionVentas paginado={comprobantes} onPageChange={(page) => {
+                    router.get('/comprobantes', { ...(filtros.q ? { q: filtros.q } : {}), ...(filtros.fecha ? { fecha: filtros.fecha } : {}), page }, { preserveState: true, preserveScroll: true });
+                }} />
             </div>
         </SistemaLayout>
     );
